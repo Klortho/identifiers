@@ -1,0 +1,54 @@
+// This is the same as literature-ids, except for the name.
+{ name: "ids-from-json",
+  idTypes: [
+    { name: "pmid",
+      parsers: [
+        { pattern: "^\\d+$",
+          canonicalize: "NOOP",
+          isVersioned: false },
+        { pattern: "^\\d+(\\.\\d+)?$",
+          canonicalize: "NOOP",
+          isVersioned: true }
+      ]
+    },
+    { name: "pmcid",
+      parsers: [
+        { pattern: "^(\\d+)$",
+          canonicalize: "REPLACEMENT",
+          replacement: "PMC$1",
+          isVersioned: false },
+        { pattern: "^(\\d+(\\.\\d+)?)$",
+          canonicalize: "REPLACEMENT",
+          replacement: "PMC$1",
+          isVersioned: true },
+        { pattern: "^([Pp][Mm][Cc]\\d+)$",
+          canonicalize: "UPPERCASE",
+          isVersioned: false },
+        { pattern: "^([Pp][Mm][Cc]\\d+(\\.\\d+)?)$",
+          canonicalize: "UPPERCASE",
+          isVersioned: true }
+      ]
+    },
+    { name: "mid",
+      parsers: [
+        { pattern: "^([A-Za-z]+\\d+)$",
+          canonicalize: "UPPERCASE",
+          isVersioned: true }
+      ]
+    },
+    { name: "doi",
+      parsers: [
+        { pattern: "^(10\\.\\d+\\/.*)$",
+          canonicalize: "NOOP",
+          isVersioned: false }
+      ]
+    },
+    { name: "aiid",
+      parsers: [
+        { pattern: "^(\\d+)$",
+          canonicalize: "NOOP",
+          isVersioned: true }
+      ]
+    }
+  ]
+}
