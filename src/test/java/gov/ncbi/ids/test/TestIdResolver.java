@@ -30,7 +30,7 @@ import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
 import gov.ncbi.ids.IdType;
 import gov.ncbi.ids.RequestId;
-import gov.ncbi.ids.RequestId.B;
+import gov.ncbi.ids.RequestId.MaybeBoolean;
 
 
 /**
@@ -159,7 +159,7 @@ public class TestIdResolver
         assertEquals(UNKNOWN, rid0.getState());
         assertTrue(rid0.isWellFormed());
         assertFalse(rid0.isResolved());
-        assertEquals(B.MAYBE, rid0.isGood());
+        assertEquals(MaybeBoolean.MAYBE, rid0.isGood());
         assertEquals("pMid", rid0.getRequestedType());
         assertEquals("12345", rid0.getRequestedValue());
         assertEquals(pmid.id("12345"), rid0.getMainId());

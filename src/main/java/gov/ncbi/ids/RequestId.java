@@ -17,36 +17,36 @@ import org.slf4j.LoggerFactory;
  * (if there was one), and the "main" Identifier object created as the
  * result of parsing that string.
  *
+ * <p>
  * In addition, this might store the results of invoking the external ID
  * resolution service, as an IdSet. Any RequestId object can be in one
  * of the following states.
  *
- *                      isResolved
- *            isWellFormed      isValid  Description
- *  -------------------------------------------------------------------------
- *  NOT_WELL_FORMED  F       T      F     The attempt to parse the string as
- *                                        an ID failed
- *  UNKNOWN          T       F    MAYBE   The string is well-formed, but we
- *                                        don't know whether or not it
- *                                        refers to a real resource.
- *  INVALID          T       T      F     The string is well-formed,
- *                                        but it does not refer to a real
- *                                        resource.
- *  GOOD             T       T      T     The string was parsed as a valid
- *                                        Identifier, and it refers to a
- *                                        real resource. Other
- *                                        IDs, of different types, have been
- *                                        found and are linked.
+ * <table>
+ *   <tr><th></th><th>isWellFormed</th><th>isResolved</th><th>isValid</th><th>Description</th></tr>
+ *   <tr><th>NOT_WELL_FORMED</th><td>F</td><td>T</td><td>F</td>
+ *     <td>The attempt to parse the string as an ID failed</td></tr>
+ *   <tr><th>UNKNOWN</th><td>T</td><td>F</td><td>MAYBE</td>
+ *     <td>The string is well-formed, but we don't know whether or not it
+ *       refers to a real resource.</td></tr>
+ *   <tr><th>INVALID</th><td>T</td><td>T</td><td>F</td>
+ *     <td>The string is well-formed, but it does not refer to a real resource.</td></tr>
+ *   <tr><th>GOOD</th><td>T</td><td>T</td><td>T</td>
+ *     <td>The string was parsed as a valid Identifier, and it refers to a
+ *       real resource. Other IDs, of different types, have been
+ *       found and are linked.</td></tr></table>
  *
- * As a note on implementation, here's another table with the values of each
- * of a few member variables in each of the states:
+ * <p>
+ * The state is derived from the values of a few properties,
+ * as listed in the following table:
  *
- *                   _mainId  _resolved  _set
- *  -------------------------------------------
- *  NOT_WELL_FORMED    null       T       null
- *  UNKNOWN         Identifier    F       null
- *  INVALID         Identifier    T       null
- *  GOOD            Identifier    T       IdSet
+ * <table>
+ *   <tr><th></th><th>mainId</th><th>resolved</th><th>set</th></tr>
+ *   <tr><th>NOT_WELL_FORMED</th><td>null</td><td>T</td><td>null</td></tr>
+ *   <tr><th>UNKNOWN</th><td>Identifier</td>  <td>F</td><td>null</td></tr>
+ *   <tr><th>INVALID</th><td>Identifier</td>  <td>T</td><td>null</td></tr>
+ *   <tr><th>GOOD</th><td>Identifier</td>     <td>T</td><td>IdSet</td></tr>
+ * </table>
  */
 
 public class RequestId extends Id
@@ -132,7 +132,7 @@ public class RequestId extends Id
      * A couple of methods return a three-state value: either true,
      * false, or unknown (maybe).
      */
-    public enum B {
+    public enum MaybeBoolean {
         TRUE,
         FALSE,
         MAYBE
@@ -154,7 +154,7 @@ public class RequestId extends Id
     }
 
     /**
-     * @return  true if the original type specifier and value string
+     * This is true if the original type specifier and value string
      * were successfully parsed into an Identifier object.
      */
     public boolean isWellFormed() {
@@ -174,19 +174,19 @@ public class RequestId extends Id
     /**
      * Whether or not the requested ID successfully parsed and is known to
      * point to a real resource.
-     * @return  One of three states: B.TRUE, B.FALSE, or B.MAYBE. The
-     *   return value will be B.MAYBE if the value string was successfully
+     * @return  One of three values: MaybeBoolean.TRUE, MaybeBoolean.FALSE, or MaybeBoolean.MAYBE. The
+     *   return value will be MaybeBoolean.MAYBE if the value string was successfully
      *   parsed into an Identifier, but it hasn't been resolved yet. In that
      *   case, it's not possible to say whether or not it points to a real
      *   resource.
      */
-    public B isGood() {
+    public MaybeBoolean isGood() {
         State state = getState();
         return
-            state == NOT_WELL_FORMED ? B.FALSE :
-            state == UNKNOWN         ? B.MAYBE :
-            state == INVALID         ? B.FALSE :
-                                       B.TRUE;
+            state == NOT_WELL_FORMED ? MaybeBoolean.FALSE :
+            state == UNKNOWN         ? MaybeBoolean.MAYBE :
+            state == INVALID         ? MaybeBoolean.FALSE :
+                                       MaybeBoolean.TRUE;
     }
 
     /**
@@ -345,16 +345,32 @@ public class RequestId extends Id
         return this.set != null && this.set.same(scope, oid);
     }
 
+    /**
+     * This helper provides a shortcut for testing the object properties
+     * for equality.
+     */
+    public static boolean objEquals(Object objA, Object objB) {
+        return
+            (objA == objB) ||
+            ( (objA != null) && (objB != null) &&
+              objA.equals(objB) );
+    }
+
+    /**
+     * Two RequestIds are equal if they are the same in all their particulars:
+     * requestedType, requestedValue, mainId, resolved, and set.
+     */
     @Override
     public boolean equals(Object other) {
         if (other == null) return false;
         if (!(other instanceof RequestId)) return false;
         RequestId orid = (RequestId) other;
-        return this.requestedType == orid.requestedType &&
-                this.requestedValue == orid.requestedValue &&
-                this.mainId == orid.mainId &&
-                this.resolved == orid.resolved &&
-                this.set == orid.set;
+        log.debug("====> testing");
+        return objEquals(this.requestedType, orid.requestedType) &&
+            objEquals(this.requestedValue, orid.requestedValue) &&
+            objEquals(this.mainId, orid.mainId) &&
+            this.resolved == orid.resolved &&
+            objEquals(this.set, orid.set);
     }
 
     //////////////////////////////////////////////////////////////////////////

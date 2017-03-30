@@ -1,18 +1,16 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.RequestId.B.FALSE;
-import static gov.ncbi.ids.RequestId.B.MAYBE;
-import static gov.ncbi.ids.RequestId.B.TRUE;
+import static gov.ncbi.ids.Id.IdScope.*;
+import static gov.ncbi.ids.RequestId.MaybeBoolean.FALSE;
+import static gov.ncbi.ids.RequestId.MaybeBoolean.MAYBE;
+import static gov.ncbi.ids.RequestId.MaybeBoolean.TRUE;
 import static gov.ncbi.ids.RequestId.State.GOOD;
 import static gov.ncbi.ids.RequestId.State.INVALID;
 import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
 import static gov.ncbi.ids.RequestId.State.UNKNOWN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
+
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,8 +29,9 @@ import gov.ncbi.ids.Identifier;
 import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
 import gov.ncbi.ids.VersionedIdSet;
-import gov.ncbi.ids.RequestId.B;
+import gov.ncbi.ids.RequestId.MaybeBoolean;
 import gov.ncbi.ids.RequestId.State;
+import gov.ncbi.ids.Id.IdScope;
 
 public class TestRequestId
 {
@@ -113,6 +112,12 @@ public class TestRequestId
     public void testNotWellFormed() {
         RequestId rid = new RequestId(litIds, "shwartz:nothing");
         checkState("testNotWellFormed: ", NOT_WELL_FORMED, rid);
+        for (IdType t : Arrays.asList(pmid, pmcid, mid, doi, aiid)) {
+            assertFalse(rid.hasType(t));
+            assertNull(rid.getId(t));
+            assertFalse(rid.isVersioned());
+        }
+        assertNull(rid.getId(Arrays.asList(doi, mid, pmcid)));
     }
 
     @Test
@@ -127,6 +132,12 @@ public class TestRequestId
         log.debug("  dumped: " + rid.dump());
         checkState("testUnknown: ", UNKNOWN, rid);
 
+        assertFalse(rid.hasType(pmid));
+        assertNull(rid.getId(pmid));
+        assertTrue(rid.hasType(pmcid));
+        assertEquals(pmcid.id("PMC1234"), rid.getId(pmcid));
+        assertFalse(rid.isVersioned());
+
         assertSame(litIds, rid.getIdDb());
         assertNull(rid.getRequestedType());
         assertEquals("pMC1234", rid.getRequestedValue());
@@ -135,8 +146,11 @@ public class TestRequestId
         assertEquals(pmcid, rid.getMainType());
         assertEquals("PMC1234", rid.getMainValue());
         assertEquals("pmcid:PMC1234", rid.getMainCurie());
+
         assertTrue(rid.hasType(pmcid));
+        assertEquals(pmcid.id("PMC1234"), rid.getId(pmcid));
         assertFalse(rid.hasType(mid));
+        assertNull(rid.getId(mid));
 
         assertEquals(litIds.id("pmcid:PMC1234"), rid.getId(pmcid));
 
@@ -148,6 +162,7 @@ public class TestRequestId
     public void testInvalid() {
         boolean exceptionThrown;
 
+        // Can't resolve with null.
         RequestId rid0 = new RequestId(litIds, "pMC1234");
         rid0.resolve(null);
         checkState("testInvalid: ", INVALID, rid0);
@@ -161,6 +176,7 @@ public class TestRequestId
         }
         assertTrue(exceptionThrown);
 
+        // Try to resolve, but pmcid doesn't match
         RequestId rid1 = new RequestId(litIds, "pMC1234");
         IdSet rset = (new NonVersionedIdSet(litIds))
             .add(pmid.id("123456"),
@@ -178,6 +194,79 @@ public class TestRequestId
     }
 
     @Test
+    public void testEquals() {
+        RequestId ridA = new RequestId(litIds, "PMC1234");
+        assertFalse(ridA.isVersioned());
+        log.debug("ridA: " + ridA);
+
+        // Not equal to null
+        assertFalse(ridA.equals(null));
+
+        // Not equal to a matching Identifier
+        assertNotEquals(ridA, pmcid.id("PMC1234"));
+
+        // Is equal to another RequestId that's created with the exact same
+        // data
+        RequestId ridB = new RequestId(litIds, "PMC1234");
+        assertFalse(ridB.isVersioned());
+        log.debug("ridB: " + ridB);
+
+        assertEquals(ridA, ridB);
+        checkEqualsMethod(ridA, ridB);
+
+        // Not equal to one created with *almost* the same data, even though
+        // the mainId's are equal.
+        RequestId ridC = new RequestId(litIds, "pmcid", "PMC1234");
+        assertEquals(ridA.getMainId(), ridC.getMainId());
+        log.debug("These two should not be equal: " + ridA + ", " + ridC);
+        log.debug("  ridA: " + ridA.dump());
+        log.debug("  ridC: " + ridC.dump());
+        assertNotEquals(ridA, ridC);
+        checkEqualsMethod("Different", ridA, ridC);
+    }
+
+    @Test
+    public void testSameness()
+    {
+        RequestId ridA = new RequestId(litIds, "PMC1234");
+
+        // Not the same as null
+        assertFalse(ridA.same(null));
+        assertFalse(ridA.same(RESOURCE, null));
+        assertFalse(ridA.same(EXPRESSION, null));
+        assertFalse(ridA.same(WORK, null));
+
+        // Is the same, in every scope, to an object that is equal
+        RequestId ridB = new RequestId(litIds, "PMC1234");
+
+        assertTrue(ridA.equals(ridB));
+        assertTrue(ridA.same(ridB));
+        assertTrue(ridA.same(RESOURCE, ridB));
+        assertTrue(ridA.same(EXPRESSION, ridB));
+        assertTrue(ridA.same(WORK, ridB));
+
+        // Not the same as a non-well-formed one
+        RequestId ridC = new RequestId(litIds, "shwartz:nothing");
+        assertEquals(NOT_WELL_FORMED, ridC.getState());
+        for (IdScope scope : Arrays.asList(RESOURCE, EXPRESSION, WORK)) {
+            assertFalse(ridA.same(scope, ridC));
+            assertFalse(ridC.same(scope, ridA));
+        }
+
+        // Test sameness to a resolved rid.
+        RequestId ridD = new RequestId(litIds, "PMC1234");
+        IdSet rset = (new NonVersionedIdSet(litIds))
+                .add(pmid.id("123456"),
+                     pmcid.id("1234"),
+                     doi.id("10.13/23434.56"));
+        ridD.resolve(rset);
+        for (IdScope scope : Arrays.asList(RESOURCE, EXPRESSION, WORK)) {
+            assertTrue(ridA.same(scope, ridD));
+            assertTrue(ridD.same(scope, ridA));
+        }
+    }
+
+    @Test
     public void testGood() {
         RequestId rid = new RequestId(litIds, "pMC1234");
         IdSet rset = (new NonVersionedIdSet(litIds))
@@ -187,5 +276,20 @@ public class TestRequestId
         assertTrue(rset.same(rid.getMainId()));
         rid.resolve(rset);
         checkState("testGood: ", GOOD, rid);
+
+        assertFalse(rid.isVersioned());
+
+        assertTrue(rid.hasType(pmid));
+        assertEquals(pmid.id("123456"), rid.getId(pmid));
+
+        assertTrue(rid.hasType(pmcid));
+        assertEquals(pmcid.id("1234"), rid.getId(pmcid));
+
+        assertFalse(rid.hasType(mid));
+
+        assertTrue(rid.hasType(doi));
+        assertEquals(doi.id("10.13/23434.56"), rid.getId(doi));
+
+        assertFalse(rid.hasType(aiid));
     }
 }
