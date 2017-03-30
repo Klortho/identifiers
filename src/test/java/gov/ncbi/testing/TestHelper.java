@@ -103,6 +103,9 @@ public class TestHelper
         assertTrue(msgAppend(msg, "expected exception"), thrown);
     }
 
+    /**
+     * Assertion for testing that an exception gets thrown
+     */
     public static <T extends Exception> void
     assertThrows(Class<T> etype, TestLambda testLambda) {
         assertThrows(null, etype, testLambda);

@@ -211,11 +211,11 @@ public class TestIdSet
         assertEquals(expList, uut.ids());
 
         // test that you can't add a different id of the same type
-        assertThrows(null, IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
             () -> uut.add(pmcid.id("87656")));
 
         // verify that you can't add an id with wrong version-specificity
-        assertThrows(null, IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
             () -> uut.add(mid.id("NIHMS88756")));
     }
 
@@ -258,11 +258,11 @@ public class TestIdSet
         assertEquals(3, toList(uut.idStream()).size());
 
         // test that you can't add another id of the same type
-        assertThrows(null, IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
             () -> uut.add(pmcid.id("87656.3")));
 
         // verify that you can't add an id with wrong version-specificity
-        assertThrows(null, IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
             () -> uut.add(doi.id("10.13/23434.56")));
     }
 

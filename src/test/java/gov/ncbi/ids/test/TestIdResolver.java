@@ -1,11 +1,14 @@
 package gov.ncbi.ids.test;
 
 import static gov.ncbi.ids.RequestId.State.*;
+import static gov.ncbi.testing.TestHelper.assertThrows;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,17 +21,23 @@ import org.junit.rules.TestName;
 
 import static org.mockito.Mockito.*;
 import org.mockito.*;
-
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
+import gov.ncbi.ids.IdSet;
 import gov.ncbi.ids.IdType;
+import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
 import gov.ncbi.ids.RequestId.MaybeBoolean;
 
@@ -40,6 +49,7 @@ import gov.ncbi.ids.RequestId.MaybeBoolean;
  */
 public class TestIdResolver
 {
+    private static final ClassLoader loader = TestIdResolver.class.getClassLoader();
     private static final Logger log = LoggerFactory.getLogger(TestIdResolver.class);
 
     @Rule
@@ -53,84 +63,106 @@ public class TestIdResolver
     private static IdType pmcid;
     private static IdType pmid;
 
-
-    //////////////////////////////////////////////////////////////////
-    // Utilities for mocking the JSON service
-
-    // Create and initialize the real ObjectMapper.
+    // Real ObjectMapper for reading JSON from local filesystem
     static final ObjectMapper realMapper = new ObjectMapper();
 
-    /// This function reads a mocked response from a JSON file
-    static JsonNode mockResolverResponse(String name)
-        throws IOException
-    {
-        URL url = TestIdResolver.class.getClassLoader()
-            .getResource("id-resolver-mock-responses/" + name + ".json");
-        return realMapper.readTree(url);
-    }
+    // Mock ObjectMapper
+    static ObjectMapper mockMapper;
 
     /**
-     * A custom ArgumentMatcher used with Mockito that checks the argument to
-     * the mocked ObjectMapper's readTree() method (which is a URL), looking
-     * for a part of the query string.
+     * Cache for mocked json responses. The keys are the file basenames of the
+     * files in src/test/resources/resolver-mock-responses. This gets cleared
+     * for every test.
      */
-    static class IdArgMatcher implements ArgumentMatcher<URL> {
-        private String _expectedStr;
-        public IdArgMatcher(String expectedStr) {
-            _expectedStr = expectedStr;
+    static Map<String, JsonNode> mockResponseCache;
+
+
+    /////////////////////////////////////////////////////////////
+    // Methods related to mocking responses.
+
+    /**
+     * This function returns a JsonNode from a mock-response file, given
+     * the file's name.
+     * @param name  Just the bare name of the JSON file, without path
+     *   or extension
+     */
+    static JsonNode getMockResponse(String name)
+        throws IOException
+    {
+        log.trace("Getting JSON response named " + name);
+        JsonNode resp = null;
+        if (mockResponseCache.containsKey(name)) {
+            log.trace("  Cache hit");
+            resp = mockResponseCache.get(name);
         }
-        @Override
-        public boolean matches(URL url) {
-            if (url == null || url.getQuery() == null) return false;
-            return url.getQuery().matches("^.*" + _expectedStr + ".*$");
+        else {
+            URL url = loader.getResource("resolver-mock-responses/" + name + ".json");
+            log.trace("  JSON should be at " + url);
+            resp = realMapper.readTree(url);
+            log.trace("  Received: " + resp);
+            mockResponseCache.put(name, resp);
         }
-        @Override
-        public String toString() {
-            return "[URL expected to contain " + _expectedStr + "]";
-        }
+        return resp;
     }
 
     /**
      * This cross-references the pattern that we look for in the query string
      * to the name of the JSON file containing the mocked response.
      */
-    static final String[][] resolverNodes = new String[][] {
+    static final String[][] mockUrlPatterns = new String[][] {
         new String[] { "idtype=pmid&ids=26829486,22368089", "two-good-pmids" },
         new String[] { "idtype=pmid&ids=26829486,7777", "one-good-one-bad-pmid" },
     };
 
-    static ObjectMapper mockMapper = mock(ObjectMapper.class);
-
-    // FIXME: this needs to be in a function; fix this.
-  /*
-    static {
-        for (String[] pair : resolverNodes) {
+    /**
+     * This function takes a URL and attempts to match it against the patterns
+     * above.
+     * @return The name of the pattern, or null if none is found.
+     */
+    static String getUrlPattern(URL url) {
+        for (String[] pair : mockUrlPatterns) {
             String pattern = pair[0];
-            String name = pair[1];
-            try {
-                when(mockMapper.readTree(argThat(new IdArgMatcher(pattern))))
-                    .thenReturn(mockResolverResponse(name));
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            String pname = pair[1];
+            String q = url.getQuery();
+            if (q != null && q.matches("^.*" + pattern + ".*$")) {
+                return pname;
             }
         }
+        return null;
     }
-  */
 
-    //////////////////////////////////////////////////////////////////////
-    // Initialization
 
     @Before
-    public void initialize() {
+    public void initialize()
+        throws Exception
+    {
         litIds = IdDb.litIds();           // pmid, pmcid, mid, doi, aiid
         pmid = litIds.getType("pmid");
         pmcid = litIds.getType("pmcid");
         mid = litIds.getType("mid");
         doi = litIds.getType("doi");
         aiid = litIds.getType("aiid");
+
+        // Reset the cache with every test
+        mockResponseCache = new HashMap<String, JsonNode>();
+
+        mockMapper = mock(ObjectMapper.class);
+        when(mockMapper.readTree( (URL) any() )).thenAnswer(
+            new Answer<JsonNode>() {
+                @Override
+                public JsonNode answer(InvocationOnMock invocation) throws Throwable {
+                    Object[] args = invocation.getArguments();
+                    URL url = (URL) args[0];
+                    String pname = getUrlPattern(url);
+                    if (pname == null) return null;
+                    return getMockResponse(pname);
+                }
+            }
+        );
     }
+
+    /////////////////////////////////////////////////////////////
+    // Test constructor and its helpers
 
     /**
      * Test the IdResolver class constructors and data access methods.
@@ -146,6 +178,45 @@ public class TestIdResolver
         log.debug(resolver.getConfig());
     }
 
+    /////////////////////////////////////////////////////////////
+    // Test the JSON mocking feature.
+
+    /**
+     * Test the test -- make sure the service mocking works.
+     */
+    @Test
+    public void testMock()
+        throws Exception
+    {
+        log.trace("Starting testTest");
+        URL url = new URL("https://example.com/?idtype=pmid&ids=26829486,22368089");
+        ObjectNode resp = (ObjectNode) mockMapper.readTree(url);
+
+        TextNode status = (TextNode) resp.get("status");
+        assertEquals("ok", status.asText());
+        TextNode respDate = (TextNode) resp.get("responseDate");
+        assertEquals("2017-03-01 16:31:53", respDate.asText());
+
+        ArrayNode records = (ArrayNode) resp.get("records");
+        assertNotNull(records);
+        assertEquals(2, records.size());
+        log.debug("record0: " + records.get(0));
+        log.debug("record1: " + records.get(1));
+
+        ObjectNode record0 = (ObjectNode) records.get(0);
+
+        TextNode pmcIdent = (TextNode) record0.get("pmcid");
+        assertEquals("PMC3539452", pmcIdent.asText());
+    }
+
+
+
+    /////////////////////////////////////////////////////////////
+    // Test each method/function in the pipeline
+
+    /**
+     * Test that the list of RequestIds is created
+     */
     @Test
     public void testParseRequestIds()
         throws Exception
@@ -182,6 +253,9 @@ public class TestIdResolver
         assertEquals(pmcid.id("PMC778.4"), rids.get(3).getMainId());
     }
 
+    /**
+     * Helper function to verify the contents of a List of RequestIds.
+     */
     public void
     checkGroup(IdType type, Map<IdType, List<RequestId>> groups, String ...exp)
     {
@@ -191,6 +265,11 @@ public class TestIdResolver
         assertEquals(Arrays.asList(exp), group);
     }
 
+    /**
+     * Test the `groupsToResolve()` function, that divides the List
+     * of RequestIds into groups, where each group is suitable for
+     * sending to the resolver service in one HTTP request.
+     */
     @Test
     public void testGroupsToResolve()
         throws Exception
@@ -199,17 +278,24 @@ public class TestIdResolver
 
         List<RequestId> rids;
 
+        RequestId rrid = new RequestId(litIds, "pmcid", "1234");
+        IdSet rset = new NonVersionedIdSet(litIds);
+        rset.add(pmcid.id("pmc1234"), doi.id("10.12/34/56"));
+        rrid.resolve(rset);
+
         rids = Arrays.asList(
-                new RequestId(litIds, "pmid", "34567"),    // has wanted
-                new RequestId(litIds, "pmcid", "77898"),
-                new RequestId(litIds, "mid", "MID7"),
-                new RequestId(litIds, "pmcid", "77a898"),  // bad
-                new RequestId(litIds, "pmid", "34567.5"),  // has wanted
-                new RequestId(litIds, "aiid", "77898"),
-                new RequestId(litIds, "pmcid", "34567"),
-                new RequestId(litIds, "blech", "77898"),   // bad
-                new RequestId(litIds, "pmcid", "77898.1"),
-                new RequestId(litIds, "aiid", "778")
+            new RequestId(litIds, "pmid", "34567"),    //  0 - has wanted
+            new RequestId(litIds, "pmcid", "77898"),   //  1
+            (RequestId) null,                          //  2 - null
+            new RequestId(litIds, "mid", "MID7"),      //  3
+            new RequestId(litIds, "pmcid", "77a898"),  //  4 - bad
+            new RequestId(litIds, "pmid", "34567.5"),  //  5 - has wanted
+            new RequestId(litIds, "aiid", "77898"),    //  6
+            new RequestId(litIds, "pmcid", "34567"),   //  7
+            rrid,                                      //  8 - already resolved
+            new RequestId(litIds, "blech", "77898"),   //  9 - bad
+            new RequestId(litIds, "pmcid", "77898.1"), // 10
+            new RequestId(litIds, "aiid", "778")       // 11
         );
 
         Map<IdType, List<RequestId>> groups = resolver.groupsToResolve(rids);
@@ -221,6 +307,10 @@ public class TestIdResolver
         checkGroup(aiid, groups, "aiid:77898", "aiid:778");
     }
 
+    /**
+     * Test the resolverUrl() method, that generates a URL to the resolver
+     * service, given a list of request IDs.
+     */
     @Test
     public void testResolverUrl()
         throws Exception
@@ -231,6 +321,7 @@ public class TestIdResolver
         List<RequestId> rids;
         URL requestURL;
 
+        // Get the URL for two pmids that both need resolving
         fromType = pmid;
         rids = Arrays.asList(
             new RequestId(litIds, "pmid", "34567"),
@@ -242,7 +333,15 @@ public class TestIdResolver
         assertTrue(requestURL.toString().endsWith(
             "idtype=pmid&ids=34567,77898"));
 
-        // FIXME: Test some versioned ones
+        // Verify some exceptions
+        assertThrows(IllegalArgumentException.class,
+            () -> resolver.resolverUrl(pmcid, null)
+        );
+
+        assertThrows(IllegalArgumentException.class,
+            () -> resolver.resolverUrl(aiid, new ArrayList<RequestId>())
+        );
+
         rids = Arrays.asList(
                 new RequestId(litIds, "pmcid", "123.34"),
                 new RequestId(litIds, "pmcid", "13.4"),
@@ -250,33 +349,28 @@ public class TestIdResolver
                 new RequestId(litIds, "pmcid", "12")
         );
         requestURL = resolver.resolverUrl(fromType, rids);
-        log.debug("===============================");
-        log.debug("resolver URL: " + requestURL);
         assertTrue(requestURL.toString().endsWith(
             "idtype=pmcid&ids=PMC123.34,PMC13.4,PMC333,PMC12"));
     }
 
-    @Ignore
+    /**
+     * Verify that this generates a good IdSet from one record of
+     * a JSON response.
+     */
     @Test
-    public void testGlobbify()
+    public void testRecordFromJson()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmid);
+        IdResolver resolver = new IdResolver(litIds, pmcid);
+        ObjectNode jsonResp = (ObjectNode) getMockResponse("two-good-pmids");
+        ArrayNode records = (ArrayNode) jsonResp.get("records");
+        assertEquals(2, records.size());
 
-        JsonNode record = mockResolverResponse("basic-one-kid");
-      /*
-        IdSet parent = resolver.recordFromJson((ObjectNode) record, null);
-        log.debug("parent: " + parent.toString());
-
-        // Note that the `aiid` at the top level is ignored
-        assertTrue(parent.sameId(pmcid.id("PMC4734780")));
-        assertTrue(parent.sameId(pmid.id("26829486")));
-        assertTrue(parent.sameId(doi.id("10.1371/journal.pntd.0004413")));
-
-        assertTrue(parent.sameWork(pmcid.id("4734780.1")));
-        assertTrue(parent.sameWork(aiid.id("4734780")));
-      */
+        ObjectNode record0 = (ObjectNode) records.get(0);
+        IdSet set0 = resolver.recordFromJson(record0, null);
+        log.debug("Made IdSet " + set0);
     }
+
 
     @Ignore
     @Test

@@ -50,7 +50,7 @@ public class IdResolver
     private final IdType wantedType;
 
     /// The computed base URL of the converter service.
-    private final String idConverterBase;
+    public final String idConverterBase;
 
     /**
      * FIXME: this cache should move to IdDb.
@@ -284,7 +284,7 @@ public class IdResolver
      */
     public URL resolverUrl(IdType fromType, List<RequestId> rids)
     {
-        if (rids.size() == 0)
+        if (rids == null || rids.size() == 0)
             throw new IllegalArgumentException("No request IDs given");
 
         // Join the ID values for the query string
@@ -308,7 +308,8 @@ public class IdResolver
     // Read the JSON data response
 
     /**
-     * Helper function that checks for and validates the `current` field.
+     * Helper function that checks for and validates the `current` field in the
+     * JSON response from the resolver service.
      * @returns  `null` indicates a problem. If isCurrentNode is `null` or the
      * String value "false", this returns `false`. If isCurrentNode is "true",
      * this returns `true`. Otherwise null.
