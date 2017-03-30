@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -38,25 +39,48 @@ public class TestIdDb
 {
     private static final Logger log = LoggerFactory.getLogger(TestIdDb.class);
 
-    private static final String TEST_ID_DATABASE = "litids-db.json";
+    public static final String TEST_ID_DATABASE = "litids-db.json";
+    public static URL resolveUrl(String path) {
+        URL url = TestIdDb.class.getClassLoader().getResource(path);
+        if (url == null) {
+            String msg = "Failed to get the URL for " + path;
+            log.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        return url;
+    }
+    public static final URL jsonUrl = resolveUrl(TEST_ID_DATABASE);
+
     private IdDb iddb;
 
-    public TestIdDb(IdDb iddb) {
-        this.iddb = iddb;
+    public TestIdDb(String iddbSource)
+        throws IOException
+    {
+        if (iddbSource.equals("global"))
+            this.iddb = IdDb.litIds();
+        else if (iddbSource.equals("json-url"))
+            this.iddb = fromJsonUrl();
+        else if (iddbSource.equals("json-string"))
+            this.iddb = fromJsonString();
     }
 
     /**
      * Read a test IdDb from a JSON file
      */
-    private static IdDb _fromJson()
+    private static IdDb fromJsonUrl()
         throws IOException
     {
-        URL jsonUrl = TestIdDb.class.getClassLoader()
-                .getResource(TEST_ID_DATABASE);
-        if (jsonUrl == null) {
-            //log.error("Failed to get the URL for " + TEST_ID_DATABASE);
-        }
         return IdDb.fromJson(jsonUrl);
+    }
+
+    /**
+     * Read a test IdDb from a JSON string
+     */
+    private static IdDb fromJsonString()
+        throws IOException
+    {
+        String jsonString = IOUtils.toString(jsonUrl, "utf-8");
+        return IdDb.fromJson(jsonString);
     }
 
     @Parameters
@@ -64,8 +88,9 @@ public class TestIdDb
         throws IOException
     {
         Collection<Object[]> ret = new ArrayList<Object[]>();
-        ret.add(new Object[] { IdDb.litIds() });
-        ret.add(new Object[] { _fromJson() });
+        ret.add(new Object[] { "global" });
+        ret.add(new Object[] { "json-url" });
+        ret.add(new Object[] { "json-string" });
         return ret;
     }
 
@@ -221,10 +246,12 @@ public class TestIdDb
 
         id = iddb.id(pmcid, "PmC84786");
         assertTrue(iddb.isValid("PmC84786"));
+        assertTrue(iddb.isValid(pmcid, "PmC84786"));
         checkId("3.5", pmcid, "PMC84786", "pmcid:PMC84786", false, id);
 
         id = iddb.id(pmcid, "PMc84786.1");
         assertTrue(iddb.isValid("PMc84786.1"));
+        assertTrue(iddb.isValid(pmcid, "PMc84786.1"));
         checkId("3.6", pmcid, "PMC84786.1", "pmcid:PMC84786.1", true, id);
 
         id = iddb.id(mid, "Squabble3");

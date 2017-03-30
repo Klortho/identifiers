@@ -8,11 +8,10 @@ import static gov.ncbi.ids.IdSet.toList;
 import static gov.ncbi.testing.TestHelper.assertThrows;
 import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
 import static gov.ncbi.testing.TestHelper.msgAppend;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
+
+import static org.hamcrest.text.StringContainsInOrder.stringContainsInOrder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -109,15 +108,7 @@ public class TestIdSet
     public static void chkIdStream(IdDb iddb, String msg,
             Stream<Identifier> uut, String... expect)
     {
-        List<Identifier> expected = Arrays.asList(expect).stream()
-            .map(str -> {
-                Identifier id = iddb.id(str);
-                if (id == null) throw new IllegalStateException(
-                    "Bad ID literal in test data: " + str);
-                return id;
-            })
-            .collect(Collectors.toList());
-
+        List<Identifier> expected = iddb.idList(expect);
         List<Identifier> actual = uut.collect(Collectors.toList());
 
         log.debug("chkIdStream:");
@@ -187,6 +178,7 @@ public class TestIdSet
     public void testConstructorNoVer()
     {
         NonVersionedIdSet uut = new NonVersionedIdSet(litIds);
+        log.debug(uut.dump());
 
         assertFalse(uut.isVersioned());
         assertEquals(0, uut.getVersions().size());
@@ -198,6 +190,7 @@ public class TestIdSet
         List<Identifier> expList = Arrays.asList(pmidId, pmcidId, doiId);
 
         uut.add(pmidId, pmcidId, doiId);
+        log.debug(uut.dump());
         assertTrue(uut.hasType(pmid));
         assertTrue(uut.hasType(pmcid));
         assertTrue(uut.hasType(doi));
@@ -276,7 +269,6 @@ public class TestIdSet
     /**
      * Test toString()
      */
-    @Ignore
     @Test
     public void testToString()
     {
@@ -285,13 +277,13 @@ public class TestIdSet
         log.debug("kid1: " + kid1.toString());
         log.debug("kid2: " + kid2.toString());
 
-        assertEquals("{ pmid:123456, pmcid:PMC654321, doi:10.13/23434.56, " +
-            "versions: [ { pmid:123456.1, pmcid:PMC654321.2 }, " +
-            "*{ pmid:123456.3, mid:NIHMS77876 }, { pmcid:PMC654321.8, aiid:654343 } ] }",
-            parent.toString());
-        assertEquals("{ pmid:123456.1, pmcid:PMC654321.2 }", kid0.toString());
-        assertEquals("{ pmid:123456.3, mid:NIHMS77876 }", kid1.toString());
-        assertEquals("{ pmcid:PMC654321.8, aiid:654343 }", kid2.toString());
+        assertThat(parent.toString(), stringContainsInOrder(Arrays.asList(
+            "pmid:123456", "pmcid:PMC654321", "10.13/23434.56")));
+
+        log.debug("parent: " + parent.dump());
+        log.debug("kid0: " + kid0.dump());
+        log.debug("kid1: " + kid1.dump());
+        log.debug("kid2: " + kid2.dump());
     }
 
     /**
@@ -301,6 +293,7 @@ public class TestIdSet
     @Test
     public void testParentsAndKids()
     {
+        log.debug("parent.dump: " + parent.dump());
         log.debug("NonVersionedIdSet parent: " + parent.toString());
         log.debug("IdVersionSet kid0: " + kid0.toString());
         log.debug("IdVersionSet kid1: " + kid1.toString());
@@ -401,6 +394,7 @@ public class TestIdSet
         chkSetStream(null, kid2.setStream(WORK), kid2, parent, kid1, kid0);
     }
 
+
     /**
      */
     @Test
@@ -458,6 +452,122 @@ public class TestIdSet
         chkIdStream(null, kid0.idStream(WORK), kid0.idStream(WORK, null));
         chkIdStream(null, kid1.idStream(WORK), kid1.idStream(WORK, null));
         chkIdStream(null, kid2.idStream(WORK), kid2.idStream(WORK, null));
+    }
+
+    public List<Identifier> filter(IdType type, List<Identifier> list) {
+        return list.stream().filter(id -> id.getType().equals(type))
+            .collect(Collectors.toList());
+    }
+
+    @Test
+    public void testIdLists() {
+
+        List<Identifier> expParent = litIds.idList("123456", "PMC654321", "10.13/23434.56");
+        List<Identifier> expKid0 = litIds.idList("123456.1", "PMC654321.2");
+        List<Identifier> expKid1 = litIds.idList("123456.3", "NIHMS77876");
+        List<Identifier> expKid2 = litIds.idList("PMC654321.8", "aiid:654343");
+
+        assertEquals(expParent, parent.ids());
+        assertEquals(expKid0, kid0.ids());
+        assertEquals(expKid1, kid1.ids());
+        assertEquals(expKid2, kid2.ids());
+
+        assertEquals(expParent, parent.ids(RESOURCE));
+        assertEquals(expKid0, kid0.ids(RESOURCE));
+        assertEquals(expKid1, kid1.ids(RESOURCE));
+        assertEquals(expKid2, kid2.ids(RESOURCE));
+
+        assertEquals(expParent, parent.ids(RESOURCE, null));
+        assertEquals(expKid0, kid0.ids(RESOURCE, null));
+        assertEquals(expKid1, kid1.ids(RESOURCE, null));
+        assertEquals(expKid2, kid2.ids(RESOURCE, null));
+
+        assertEquals(filter(pmid, expParent), parent.ids(RESOURCE, pmid));
+        assertEquals(filter(pmcid, expParent), parent.ids(RESOURCE, pmcid));
+        assertEquals(filter(mid, expParent), parent.ids(RESOURCE, mid));
+        assertEquals(filter(doi, expParent), parent.ids(RESOURCE, doi));
+        assertEquals(filter(aiid, expParent), parent.ids(RESOURCE, aiid));
+
+        assertEquals(filter(pmid, expParent), parent.ids(pmid));
+        assertEquals(filter(pmcid, expParent), parent.ids(pmcid));
+        assertEquals(filter(mid, expParent), parent.ids(mid));
+        assertEquals(filter(doi, expParent), parent.ids(doi));
+        assertEquals(filter(aiid, expParent), parent.ids(aiid));
+
+
+        assertEquals(litIds.id("123456"), parent.id(RESOURCE, pmid));
+        assertEquals(litIds.id("PMC654321"), parent.id(RESOURCE, pmcid));
+        assertEquals(null, parent.id(RESOURCE, mid));
+        assertEquals(litIds.id("10.13/23434.56"), parent.id(RESOURCE, doi));
+        assertEquals(null, parent.id(RESOURCE, aiid));
+
+        assertEquals(litIds.id("123456"), parent.id(pmid));
+        assertEquals(litIds.id("PMC654321"), parent.id(pmcid));
+        assertEquals(null, parent.id(mid));
+        assertEquals(litIds.id("10.13/23434.56"), parent.id(doi));
+        assertEquals(null, parent.id(aiid));
+
+        assertEquals(litIds.id("123456"), parent.id());
+        assertEquals(litIds.id("123456"), parent.id(RESOURCE));
+
+
+
+
+
+        List<Identifier> expParentExpr =
+            litIds.idList("pmid:123456", "pmcid:PMC654321",
+                "doi:10.13/23434.56", "pmid:123456.3", "mid:NIHMS77876");
+        List<Identifier> expKid0Expr =
+            litIds.idList("pmid:123456.1", "pmcid:PMC654321.2");
+        List<Identifier> expKid1Expr =
+            litIds.idList("pmid:123456.3", "mid:NIHMS77876", "pmid:123456",
+                "pmcid:PMC654321", "doi:10.13/23434.56");
+        List<Identifier> expKid2Expr =
+            litIds.idList("PMC654321.8", "aiid:654343");
+
+        assertEquals(expParentExpr, parent.ids(EXPRESSION));
+        assertEquals(expKid0Expr, kid0.ids(EXPRESSION));
+        assertEquals(expKid1Expr, kid1.ids(EXPRESSION));
+        assertEquals(expKid2Expr, kid2.ids(EXPRESSION));
+
+        assertEquals(expParentExpr, parent.ids(EXPRESSION, null));
+        assertEquals(expKid0Expr, kid0.ids(EXPRESSION, null));
+        assertEquals(expKid1Expr, kid1.ids(EXPRESSION, null));
+        assertEquals(expKid2Expr, kid2.ids(EXPRESSION, null));
+
+        List<Identifier> expParentWork = litIds.idList(
+            "123456", "PMC654321", "10.13/23434.56", "pmid:123456.3", "mid:NIHMS77876",
+            "pmcid:PMC654321.8", "aiid:654343", "pmid:123456.1", "pmcid:PMC654321.2");
+
+        List<Identifier> expKid0Work = litIds.idList(
+                "123456.1", "PMC654321.2",
+                "pmid:123456", "pmcid:PMC654321", "doi:10.13/23434.56", "pmid:123456.3",
+                "mid:NIHMS77876", "pmcid:PMC654321.8", "aiid:654343");
+
+        List<Identifier> expKid1Work = litIds.idList(
+                "123456.3", "NIHMS77876",
+                "pmid:123456", "pmcid:PMC654321", "doi:10.13/23434.56", "pmcid:PMC654321.8",
+                "aiid:654343", "pmid:123456.1", "pmcid:PMC654321.2");
+
+        List<Identifier> expKid2Work = litIds.idList(
+                "PMC654321.8", "aiid:654343",
+            "pmid:123456", "pmcid:PMC654321", "doi:10.13/23434.56", "pmid:123456.3",
+            "mid:NIHMS77876", "pmid:123456.1", "pmcid:PMC654321.2");
+
+        assertEquals(expParentWork, parent.ids(WORK));
+        assertEquals(expKid0Work, kid0.ids(WORK));
+        assertEquals(expKid1Work, kid1.ids(WORK));
+        assertEquals(expKid2Work, kid2.ids(WORK));
+
+        assertEquals(expParentWork, parent.ids(WORK, null));
+        assertEquals(expKid0Work, kid0.ids(WORK, null));
+        assertEquals(expKid1Work, kid1.ids(WORK, null));
+        assertEquals(expKid2Work, kid2.ids(WORK, null));
+
+        // Also test getting a list filtered by type
+        assertEquals(litIds.idList("PMC654321"), parent.ids(pmcid));
+        assertEquals(litIds.idList("PMC654321", "PMC654321.8", "PMC654321.2"),
+            parent.ids(WORK, pmcid));
     }
 
     /**

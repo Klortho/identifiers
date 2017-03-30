@@ -244,7 +244,7 @@ public abstract class IdSet extends Id
 
     /**
      * Returns the first matching Identifier from the set of those in the
-     * indicated scope and with matching type.
+     * indicated scope and with matching type, or null if there's no match.
      */
     public Identifier id(IdScope scope, IdType type) {
         return idStream(scope, type)

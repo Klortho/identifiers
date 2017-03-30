@@ -79,6 +79,9 @@ public class IdParts {
     //////////////////////////////////////////////////////////////////////////
     // Constructors and their friends
 
+    /**
+     * Constructor helper.
+)     */
     private static void parseValue(IdParts self, IdDb iddb, IdType typeSpecObj,
             String value)
     {
@@ -99,7 +102,7 @@ public class IdParts {
             self.problems.add(TYPE_MISMATCH);
 
         // The specType takes precedence
-        self.type = self.typeSpec != null ? typeSpecObj : prefixType;
+        self.type = typeSpecObj != null ? typeSpecObj : prefixType;
     }
 
     /**

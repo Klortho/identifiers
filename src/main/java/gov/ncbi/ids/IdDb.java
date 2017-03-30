@@ -222,6 +222,28 @@ public class IdDb
         return typeStream(idparts).anyMatch(t -> true);
     }
 
+    /**
+     * Convert a list of strings to identifiers all in one go. If any of
+     * the strings are invalid, this throws an IllegalArgumentException.
+     */
+    public List<Identifier> idList(String... strings) {
+        return idList(null, strings);
+    }
+
+    /**
+     * Convert a list of strings to Identifiers of the given type.
+     */
+    public List<Identifier> idList(IdType type, String... strings) {
+        return Arrays.asList(strings).stream()
+            .map(str -> {
+                Identifier id = this.id(type, str);
+                if (id == null) throw new IllegalArgumentException(
+                    "Bad ID type / value: " + type + "/" + str);
+                return id;
+            })
+            .collect(Collectors.toList());
+    }
+
 
     /**
      * This static, predefined, IdDb is available to other apps. It
