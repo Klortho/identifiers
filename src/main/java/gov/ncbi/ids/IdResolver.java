@@ -315,16 +315,16 @@ public class IdResolver
      */
     @SuppressFBWarnings("NP_BOOLEAN_RETURN_NULL")
     private Boolean _validateIsCurrent(boolean isParent, JsonNode isCurrentNode) {
-    	if (isCurrentNode == null) return false;
+        if (isCurrentNode == null) return false;
         if (isParent) {
             log.error("Error processing ID resolver response; " +
                 "got 'current' field on the parent node");
             return null;
         }
-    	String isCurrentStr = isCurrentNode.asText();
-    	if (isCurrentStr.equals("false")) return false;
-    	if (isCurrentStr.equals("true")) return true;
-    	return null;
+        String isCurrentStr = isCurrentNode.asText();
+        if (isCurrentStr.equals("false")) return false;
+        if (isCurrentStr.equals("true")) return true;
+        return null;
     }
 
     /**
@@ -333,9 +333,9 @@ public class IdResolver
      */
     private void _addIdsFromJson(IdSet self, boolean isParent, Iterator<Map.Entry<String, JsonNode>> i) {
         while (i.hasNext()) {
-        	Map.Entry<String, JsonNode> pair = i.next();
-        	String key = pair.getKey();
-        	log.debug("      key: " + key);
+            Map.Entry<String, JsonNode> pair = i.next();
+            String key = pair.getKey();
+            log.debug("      key: " + key);
             if (!nonIdFields.contains(key)) {
                 // The response includes an aiid for the parent, but that's
                 // redundant, since the same aiid always also appears in a
@@ -345,7 +345,7 @@ public class IdResolver
                 IdType idType = iddb.getType(key);
                 if (idType == null) continue;
 
-            	String value = pair.getValue().asText();
+                String value = pair.getValue().asText();
                 Identifier id = idType.id(value);
                 if (id == null) continue;
 
@@ -389,21 +389,21 @@ public class IdResolver
 
             log.debug("    status is success and is-current is vaild");
             if (isParent) {
-            	NonVersionedIdSet pself = new NonVersionedIdSet(iddb);
-            	_addIdsFromJson(pself, true, record.fields());
-            	log.debug("    This is parent node after its own ids added: " + pself);
-            	ArrayNode versionsNode = (ArrayNode) record.get("versions");
-            	for (JsonNode versionRecord : versionsNode) {
-            		VersionedIdSet kid = (VersionedIdSet) recordFromJson((ObjectNode) versionRecord, pself);
-            		pself._addVersion(kid, isCurrent);
-            	}
-            	return pself;
+                NonVersionedIdSet pself = new NonVersionedIdSet(iddb);
+                _addIdsFromJson(pself, true, record.fields());
+                log.debug("    This is parent node after its own ids added: " + pself);
+                ArrayNode versionsNode = (ArrayNode) record.get("versions");
+                for (JsonNode versionRecord : versionsNode) {
+                    VersionedIdSet kid = (VersionedIdSet) recordFromJson((ObjectNode) versionRecord, pself);
+                    pself._addVersion(kid, isCurrent);
+                }
+                return pself;
             }
             else {
-            	VersionedIdSet kself = new VersionedIdSet(parent, isCurrent);
-            	_addIdsFromJson(kself, false, record.fields());
-            	log.debug("    This is kid node after parsing: " + kself);
-            	return kself;
+                VersionedIdSet kself = new VersionedIdSet(parent, isCurrent);
+                _addIdsFromJson(kself, false, record.fields());
+                log.debug("    This is kid node after parsing: " + kself);
+                return kself;
             }
         }
     }
