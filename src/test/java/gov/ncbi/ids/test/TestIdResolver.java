@@ -3,10 +3,7 @@ package gov.ncbi.ids.test;
 import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
 import static gov.ncbi.ids.RequestId.State.UNKNOWN;
 import static gov.ncbi.testing.TestHelper.assertThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,6 +40,7 @@ import gov.ncbi.ids.IdType;
 import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
 import gov.ncbi.ids.RequestId.MaybeBoolean;
+import gov.ncbi.ids.VersionedIdSet;
 
 
 /**
@@ -89,23 +87,20 @@ public class TestIdResolver
      * @param name  Just the bare name of the JSON file, without path
      *   or extension
      */
-    static JsonNode getMockResponse(String name)
+    static ObjectNode getMockResponse(String name)
         throws IOException
     {
-        log.trace("Getting JSON response named " + name);
         JsonNode resp = null;
         if (mockResponseCache.containsKey(name)) {
-            log.trace("  Cache hit");
             resp = mockResponseCache.get(name);
         }
         else {
-            URL url = loader.getResource("resolver-mock-responses/" + name + ".json");
-            log.trace("  JSON should be at " + url);
+            URL url = loader.getResource("resolver-mock-responses/" +
+                name + ".json");
             resp = realMapper.readTree(url);
-            log.trace("  Received: " + resp);
             mockResponseCache.put(name, resp);
         }
-        return resp;
+        return (ObjectNode) resp;
     }
 
     /**
@@ -113,8 +108,12 @@ public class TestIdResolver
      * to the name of the JSON file containing the mocked response.
      */
     static final String[][] mockUrlPatterns = new String[][] {
-        new String[] { "idtype=pmid&ids=26829486,22368089", "two-good-pmids" },
-        new String[] { "idtype=pmid&ids=26829486,7777", "one-good-one-bad-pmid" },
+        new String[] {
+            "idtype=pmid&ids=26829486,22368089", "two-good-pmids"
+        },
+        new String[] {
+            "idtype=pmid&ids=26829486,7777", "one-good-one-bad-pmid"
+        },
     };
 
     /**
@@ -149,11 +148,16 @@ public class TestIdResolver
         // Reset the cache with every test
         mockResponseCache = new HashMap<String, JsonNode>();
 
+        // This is the mock object
         mockMapper = mock(ObjectMapper.class);
-        when(mockMapper.readTree( (URL) any() )).thenAnswer(
+
+        // Intercept calls to readTree()
+        when(mockMapper.readTree((URL) any())).thenAnswer(
             new Answer<JsonNode>() {
                 @Override
-                public JsonNode answer(InvocationOnMock invocation) throws Throwable {
+                public JsonNode answer(InvocationOnMock invocation)
+                        throws Throwable
+                {
                     Object[] args = invocation.getArguments();
                     URL url = (URL) args[0];
                     String pname = getUrlPattern(url);
@@ -185,14 +189,13 @@ public class TestIdResolver
     // Test the JSON mocking feature.
 
     /**
-     * Test the test -- make sure the service mocking works.
+     * Test the test -- make sure the mocking works.
      */
     @Test
     public void testMock()
         throws Exception
     {
-        log.trace("Starting testTest");
-        URL url = new URL("https://example.com/?idtype=pmid&ids=26829486,22368089");
+        URL url = new URL("http://ex.com/?idtype=pmid&ids=26829486,22368089");
         ObjectNode resp = (ObjectNode) mockMapper.readTree(url);
 
         TextNode status = (TextNode) resp.get("status");
@@ -203,16 +206,14 @@ public class TestIdResolver
         ArrayNode records = (ArrayNode) resp.get("records");
         assertNotNull(records);
         assertEquals(2, records.size());
-        log.debug("record0: " + records.get(0));
-        log.debug("record1: " + records.get(1));
-
         ObjectNode record0 = (ObjectNode) records.get(0);
+        ObjectNode record1 = (ObjectNode) records.get(1);
+        log.debug("record0: " + record0);
+        log.debug("record1: " + record1);
 
         TextNode pmcIdent = (TextNode) record0.get("pmcid");
         assertEquals("PMC3539452", pmcIdent.asText());
     }
-
-
 
     /////////////////////////////////////////////////////////////
     // Test each method/function in the pipeline
@@ -361,17 +362,81 @@ public class TestIdResolver
      * a JSON response.
      */
     @Test
-    public void testRecordFromJson()
+    public void testRecordFromJson0()
         throws Exception
     {
         IdResolver resolver = new IdResolver(litIds, pmcid);
-        ObjectNode jsonResp = (ObjectNode) getMockResponse("two-good-pmids");
+        ObjectNode jsonResp = getMockResponse("two-good-pmids");
         ArrayNode records = (ArrayNode) jsonResp.get("records");
         assertEquals(2, records.size());
 
         ObjectNode record0 = (ObjectNode) records.get(0);
-        IdSet set0 = resolver.recordFromJson(record0, null);
-        log.debug("Made IdSet " + set0);
+        NonVersionedIdSet parent0 =
+            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
+        //log.debug("Made IdSet " + parent0.dump());
+        assertFalse(parent0.isVersioned());
+
+        // check the versioned kids
+        List<VersionedIdSet> kids0 = parent0.getVersions();
+        assertEquals(1, kids0.size());
+        VersionedIdSet kid00 = kids0.get(0);
+        assertSame(parent0.getCurrent(), kid00);
+        assertEquals(pmcid.id("PMC3539452.1"), kid00.getId(pmcid));
+    }
+
+    @Test
+    public void testIdSetFromJson1()
+            throws Exception
+    {
+        IdResolver resolver = new IdResolver(litIds, doi);
+        ObjectNode jsonResp = getMockResponse("three-versions");
+        ArrayNode records = (ArrayNode) jsonResp.get("records");
+        assertEquals(1, records.size());
+
+        NonVersionedIdSet parent =
+            (NonVersionedIdSet) resolver.idSetFromJson(
+                (ObjectNode) records.get(0), null);
+        List<VersionedIdSet> kids = parent.getVersions();
+        assertEquals(3, kids.size());
+
+        // check the current
+        VersionedIdSet kid0 = kids.get(0),
+                       kid1 = kids.get(1),
+                       kid2 = kids.get(2);
+        assertFalse(kid0.isCurrent());
+        assertFalse(kid1.isCurrent());
+        assertTrue(kid2.isCurrent());
+        assertSame(kid2, parent.getCurrent());
+        assertSame(kid2, parent.getComplement());
+        assertSame(parent, kid2.getComplement());
+
+        assertEquals(mid.id("NIHMS20955"), kid0.getId(mid));
+        assertEquals(aiid.id("1950588"), kid1.getId(aiid));
+        assertEquals(pmcid.id("PMC1868567.3"), kid2.getId(pmcid));
+    }
+
+    @Test
+    public void testBadResponse0()
+        throws Exception
+    {
+        IdResolver resolver = new IdResolver(litIds, doi);
+        ObjectNode jsonResp = getMockResponse("bad-response0");
+        ObjectNode record0 = (ObjectNode) jsonResp.get("records").get(0);
+        NonVersionedIdSet parent =
+            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
+        assertNull(parent);
+    }
+
+    @Test
+    public void testBadResponse1()
+        throws Exception
+    {
+        IdResolver resolver = new IdResolver(litIds, doi);
+        ObjectNode jsonResp = getMockResponse("bad-response1");
+        ObjectNode record0 = (ObjectNode) jsonResp.get("records").get(0);
+        NonVersionedIdSet parent =
+            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
+        assertNull(parent);
     }
 
 

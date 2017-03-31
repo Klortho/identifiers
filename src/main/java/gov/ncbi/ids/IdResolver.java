@@ -215,7 +215,7 @@ public class IdResolver
 
                 ArrayNode records = (ArrayNode) response.get("records");
                 for (JsonNode record : records) {
-                    IdSet set = recordFromJson((ObjectNode) record, null);
+                    IdSet set = idSetFromJson((ObjectNode) record, null);
                     log.debug("Constructed an id set: " + set);
                     if (set == null) continue;
                     findAndBind(fromType, gRids, set);
@@ -307,35 +307,52 @@ public class IdResolver
     // Read the JSON data response
 
     /**
-     * Helper function that checks for and validates the `current` field in the
-     * JSON response from the resolver service.
-     * @returns  `null` indicates a problem. If isCurrentNode is `null` or the
-     * String value "false", this returns `false`. If isCurrentNode is "true",
-     * this returns `true`. Otherwise null.
+     * Helper function to throw an exception.
      */
-    @SuppressFBWarnings("NP_BOOLEAN_RETURN_NULL")
-    private Boolean _validateIsCurrent(boolean isParent, JsonNode isCurrentNode) {
-        if (isCurrentNode == null) return false;
-        if (isParent) {
-            log.error("Error processing ID resolver response; " +
-                "got 'current' field on the parent node");
-            return null;
+    private void badJson(String cause)
+        throws IOException
+    {
+        String msg = "Error processing JSON response from ID resolver: " + cause;
+        log.error(msg);
+        throw new IOException(msg);
+    }
+
+    /**
+     * Helper function that checks for and validates a boolean field in the
+     * JSON response from the resolver service. When boolean values are
+     * expected, either JSON boolean `true` or `false`, or strings that
+     * have the exact value "true" or "false" can be used.
+     * @param bnode  The JsonNode that's expected to hold a boolean value
+     * @param required  If this is false, then `bnode` is optional.
+     * @return `true` if the argument is a JSON boolean `true` or JSON string
+     *   with value "true"; false if it is null, boolean `false` or a string
+     *   with value "false".
+     * @throws IOException  if the argument is not a valid boolean, as
+     *   described above.
+     */
+    private boolean readBoolean(JsonNode bnode, boolean required)
+        throws IOException
+    {
+        if (bnode == null) {
+            if (required) badJson("Missing boolean value");
+            else return false;
         }
-        String isCurrentStr = isCurrentNode.asText();
-        if (isCurrentStr.equals("false")) return false;
-        if (isCurrentStr.equals("true")) return true;
-        return null;
+        if (bnode.isBoolean() && !bnode.isTextual())
+            badJson("Invalid format for a boolean value");
+        return bnode.asBoolean();
     }
 
     /**
      * Helper function that reads all the `idtype: idvalue` fields in a
      * JSON object, creates Identifiers and adds them to IdSets.
      */
-    private void _addIdsFromJson(IdSet self, boolean isParent, Iterator<Map.Entry<String, JsonNode>> i) {
+    private void _addIdsFromJson(IdSet self, boolean isParent,
+            Iterator<Map.Entry<String, JsonNode>> i)
+    {
         while (i.hasNext()) {
             Map.Entry<String, JsonNode> pair = i.next();
             String key = pair.getKey();
-            log.debug("      key: " + key);
+            //log.debug("      key: " + key);
             if (!nonIdFields.contains(key)) {
                 // The response includes an aiid for the parent, but that's
                 // redundant, since the same aiid always also appears in a
@@ -359,52 +376,40 @@ public class IdResolver
 
     /**
      * Helper function to create an IdSet object out of a single JSON record
-     * from the id converter, which typically looks like this:
-     *   { "pmcid": "PMC1193645",
-     *      "pmid": "14699080",
-     *      "aiid": "1887721",
-     *      "doi": "10.1084/jem.20020509",
-     *      "versions": [
-     *        { "pmcid": "PMC1193645.1",
-     *          "mid": "NIHMS2203",
-     *          "aiid": "1193645" },
-     *        { "pmcid": "PMC1193645.2",
-     *          "aiid": "1887721",
-     *          "current": "true" }
-     *      ]
-     *    }
+     * from the id converter. See src/test/resources/ for examples.
+     * @returns  An IdSet object, or null if there was a syntax error.
      */
-    public IdSet recordFromJson(ObjectNode record, NonVersionedIdSet parent)
+    public IdSet idSetFromJson(ObjectNode record, NonVersionedIdSet parent)
     {
-        log.debug("  Reading an IdSet from JSON");
         synchronized(this) {
+          try {
             boolean isParent = (parent == null);
 
             JsonNode status = record.get("status");
             if (status != null && !status.asText().equals("success"))
                 return null;
 
-            Boolean isCurrent = _validateIsCurrent(isParent, record.get("current"));
-            if (isCurrent == null) return null;
-
-            log.debug("    status is success and is-current is vaild");
             if (isParent) {
                 NonVersionedIdSet pself = new NonVersionedIdSet(iddb);
                 _addIdsFromJson(pself, true, record.fields());
-                log.debug("    This is parent node after its own ids added: " + pself);
                 ArrayNode versionsNode = (ArrayNode) record.get("versions");
-                for (JsonNode versionRecord : versionsNode) {
-                    VersionedIdSet kid = (VersionedIdSet) recordFromJson((ObjectNode) versionRecord, pself);
-                    pself._addVersion(kid, isCurrent);
+                for (JsonNode kidRecord : versionsNode) {
+                    idSetFromJson((ObjectNode) kidRecord, pself);
                 }
                 return pself;
             }
             else {
+                boolean isCurrent =
+                    readBoolean(record.get("current"), false);
                 VersionedIdSet kself = new VersionedIdSet(parent, isCurrent);
                 _addIdsFromJson(kself, false, record.fields());
-                log.debug("    This is kid node after parsing: " + kself);
+                //log.debug("    This is kid node after parsing: " + kself);
                 return kself;
             }
+          }
+          catch (IOException e) {
+              return null;
+          }
         }
     }
 
