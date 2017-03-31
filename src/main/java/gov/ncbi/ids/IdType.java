@@ -31,6 +31,7 @@ import gov.ncbi.ids.IdParser.IdMatchData;
 
 public class IdType
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdType.class);
 
     /**

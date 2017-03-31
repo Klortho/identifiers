@@ -23,7 +23,9 @@ import org.slf4j.LoggerFactory;
  *     - an IdType object
  * - The value string might or might now have a type prefix.
  */
-public class IdParts {
+public class IdParts
+{
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdParts.class);
 
     /**

@@ -30,12 +30,13 @@ public class TestIdentifier
 {
     private static final Logger log = LoggerFactory.getLogger(TestIdentifier.class);
 
-    private IdDb litIds;
-    private IdType aiid;
-    private IdType doi;
-    private IdType mid;
-    private IdType pmcid;
+    private IdDb litIds;    // pmid, pmcid, mid, doi, aiid
     private IdType pmid;
+    private IdType pmcid;
+    private IdType mid;
+    @SuppressWarnings("unused")
+    private IdType doi;
+    private IdType aiid;
 
     @Rule
     public TestName name = new TestName();
@@ -43,11 +44,11 @@ public class TestIdentifier
     @Before
     public void initialize() {
         litIds = IdDb.litIds();
-        aiid = litIds.getType("aiid");
-        doi = litIds.getType("doi");
-        mid = litIds.getType("mid");
-        pmcid = litIds.getType("pmcid");
         pmid = litIds.getType("pmid");
+        pmcid = litIds.getType("pmcid");
+        mid = litIds.getType("mid");
+        doi = litIds.getType("doi");
+        aiid = litIds.getType("aiid");
     }
 
     ////////////////////////////////////////////////////////////////////////

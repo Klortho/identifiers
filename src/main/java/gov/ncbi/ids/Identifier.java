@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Identifier extends Id
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(Identifier.class);
 
     private final IdType type;

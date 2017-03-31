@@ -7,11 +7,13 @@ import static gov.ncbi.ids.Id.IdScope.WORK;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 /**
  * Methods common to both Identifier and IdSet.
  */
 public abstract class Id
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(Id.class);
 
     /**

@@ -18,14 +18,12 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdParser;
 import gov.ncbi.ids.IdType;
 import gov.ncbi.ids.Identifier;

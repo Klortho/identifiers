@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -329,8 +328,8 @@ public class IdResolver
     }
 
     /**
-     * Helper function that read all the `idtype: idvalue` fields in a JSON object,
-     * and creates Identifiers and adds them to IdSets.
+     * Helper function that reads all the `idtype: idvalue` fields in a
+     * JSON object, creates Identifiers and adds them to IdSets.
      */
     private void _addIdsFromJson(IdSet self, boolean isParent, Iterator<Map.Entry<String, JsonNode>> i) {
         while (i.hasNext()) {

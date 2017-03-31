@@ -1,6 +1,8 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.Id.IdScope.*;
+import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
+import static gov.ncbi.ids.Id.IdScope.RESOURCE;
+import static gov.ncbi.ids.Id.IdScope.WORK;
 import static gov.ncbi.ids.RequestId.MaybeBoolean.FALSE;
 import static gov.ncbi.ids.RequestId.MaybeBoolean.MAYBE;
 import static gov.ncbi.ids.RequestId.MaybeBoolean.TRUE;
@@ -9,11 +11,15 @@ import static gov.ncbi.ids.RequestId.State.INVALID;
 import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
 import static gov.ncbi.ids.RequestId.State.UNKNOWN;
 import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
-import java.util.List;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -22,16 +28,13 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import gov.ncbi.ids.Id.IdScope;
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdSet;
 import gov.ncbi.ids.IdType;
-import gov.ncbi.ids.Identifier;
 import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
-import gov.ncbi.ids.VersionedIdSet;
-import gov.ncbi.ids.RequestId.MaybeBoolean;
 import gov.ncbi.ids.RequestId.State;
-import gov.ncbi.ids.Id.IdScope;
 
 public class TestRequestId
 {
@@ -41,11 +44,11 @@ public class TestRequestId
     public TestName name = new TestName();
 
     private IdDb litIds;
-    private IdType aiid;
-    private IdType doi;
-    private IdType mid;
-    private IdType pmcid;
     private IdType pmid;
+    private IdType pmcid;
+    private IdType mid;
+    private IdType doi;
+    private IdType aiid;
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Initialization

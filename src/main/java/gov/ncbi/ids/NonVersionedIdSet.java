@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
  */
 public class NonVersionedIdSet extends IdSet
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(NonVersionedIdSet.class);
 
     /**

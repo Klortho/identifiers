@@ -4,7 +4,6 @@ import static gov.ncbi.ids.Id.IdScope.EQUAL;
 import static gov.ncbi.ids.Id.IdScope.RESOURCE;
 import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.ids.Id.IdScope.WORK;
-import static gov.ncbi.ids.Id.IdScope.DIFFERENT;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,8 +21,8 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class IdSet extends Id
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdSet.class);
-
     protected final IdDb iddb;
 
     /**

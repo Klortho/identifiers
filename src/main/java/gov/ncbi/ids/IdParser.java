@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
  */
 public class IdParser
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdParser.class);
 
     private final Pattern pattern;

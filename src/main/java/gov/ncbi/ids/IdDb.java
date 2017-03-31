@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
  */
 public class IdDb
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdDb.class);
 
     /**

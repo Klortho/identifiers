@@ -1,8 +1,15 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.RequestId.State.*;
+import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
+import static gov.ncbi.ids.RequestId.State.UNKNOWN;
 import static gov.ncbi.testing.TestHelper.assertThrows;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URL;
@@ -18,15 +25,11 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-
-import static org.mockito.Mockito.*;
-import org.mockito.*;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
