@@ -1,23 +1,9 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
-import static gov.ncbi.ids.Id.IdScope.RESOURCE;
-import static gov.ncbi.ids.Id.IdScope.WORK;
-import static gov.ncbi.ids.RequestId.MaybeBoolean.FALSE;
-import static gov.ncbi.ids.RequestId.MaybeBoolean.MAYBE;
-import static gov.ncbi.ids.RequestId.MaybeBoolean.TRUE;
-import static gov.ncbi.ids.RequestId.State.GOOD;
-import static gov.ncbi.ids.RequestId.State.INVALID;
-import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
-import static gov.ncbi.ids.RequestId.State.UNKNOWN;
+import static gov.ncbi.ids.Id.IdScope.*;
+import static gov.ncbi.ids.RequestId.State.*;
 import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 
@@ -38,6 +24,7 @@ import gov.ncbi.ids.RequestId.State;
 
 public class TestRequestId
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestRequestId.class);
 
     @Rule
@@ -55,7 +42,7 @@ public class TestRequestId
 
     @Before
     public void initialize() {
-        litIds = IdDb.litIds();           // pmid, pmcid, mid, doi, aiid
+        litIds = IdDb.getLiteratureIdDb();
         pmid = litIds.getType("pmid");
         pmcid = litIds.getType("pmcid");
         mid = litIds.getType("mid");

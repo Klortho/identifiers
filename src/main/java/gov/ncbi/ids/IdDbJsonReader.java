@@ -1,18 +1,8 @@
 package gov.ncbi.ids;
 
-import static com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS;
-import static com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS;
-import static com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_NUMERIC_LEADING_ZEROS;
-import static com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES;
-import static com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES;
-import static com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION;
-import static com.fasterxml.jackson.databind.node.JsonNodeType.ARRAY;
-import static com.fasterxml.jackson.databind.node.JsonNodeType.BOOLEAN;
-import static com.fasterxml.jackson.databind.node.JsonNodeType.OBJECT;
-import static com.fasterxml.jackson.databind.node.JsonNodeType.STRING;
-import static gov.ncbi.ids.IdParser.NOOP;
-import static gov.ncbi.ids.IdParser.UPPERCASE;
-import static gov.ncbi.ids.IdParser.replacer;
+import static com.fasterxml.jackson.core.JsonParser.Feature.*;
+import static com.fasterxml.jackson.databind.node.JsonNodeType.*;
+import static gov.ncbi.ids.IdParser.*;
 
 import java.io.IOException;
 import java.net.URL;
@@ -36,6 +26,7 @@ import gov.ncbi.ids.IdParser.IdMatchData;
 
 public class IdDbJsonReader
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdDbJsonReader.class);
 
     public static final JsonParser.Feature[] jsonFeatures = {

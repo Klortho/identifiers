@@ -1,9 +1,6 @@
 package gov.ncbi.ids;
 
-import static gov.ncbi.ids.RequestId.State.GOOD;
-import static gov.ncbi.ids.RequestId.State.INVALID;
-import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
-import static gov.ncbi.ids.RequestId.State.UNKNOWN;
+import static gov.ncbi.ids.RequestId.State.*;
 
 import java.util.List;
 import java.util.Objects;
@@ -51,6 +48,7 @@ import org.slf4j.LoggerFactory;
 
 public class RequestId extends Id
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(RequestId.class);
 
     /**

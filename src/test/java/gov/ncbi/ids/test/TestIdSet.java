@@ -1,20 +1,10 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.Id.IdScope.EQUAL;
-import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
-import static gov.ncbi.ids.Id.IdScope.RESOURCE;
-import static gov.ncbi.ids.Id.IdScope.WORK;
+import static gov.ncbi.ids.Id.IdScope.*;
 import static gov.ncbi.ids.IdSet.toList;
-import static gov.ncbi.testing.TestHelper.assertThrows;
-import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
-import static gov.ncbi.testing.TestHelper.msgAppend;
+import static gov.ncbi.testing.TestHelper.*;
 import static org.hamcrest.text.StringContainsInOrder.stringContainsInOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +29,7 @@ import gov.ncbi.ids.VersionedIdSet;
 
 public class TestIdSet
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdSet.class);
 
     @Rule
@@ -67,7 +58,7 @@ public class TestIdSet
 
     @Before
     public void initialize() {
-        litIds = IdDb.litIds();           // pmid, pmcid, mid, doi, aiid
+        litIds = IdDb.getLiteratureIdDb();
         pmid = litIds.getType("pmid");
         pmcid = litIds.getType("pmcid");
         mid = litIds.getType("mid");

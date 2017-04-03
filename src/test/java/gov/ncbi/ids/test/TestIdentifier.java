@@ -28,6 +28,7 @@ import gov.ncbi.ids.Identifier;
  */
 public class TestIdentifier
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdentifier.class);
 
     private IdDb litIds;    // pmid, pmcid, mid, doi, aiid
@@ -43,7 +44,7 @@ public class TestIdentifier
 
     @Before
     public void initialize() {
-        litIds = IdDb.litIds();
+        litIds = IdDb.getLiteratureIdDb();
         pmid = litIds.getType("pmid");
         pmcid = litIds.getType("pmcid");
         mid = litIds.getType("mid");

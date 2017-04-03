@@ -1,18 +1,12 @@
 package gov.ncbi.ids.test;
 
-import static com.fasterxml.jackson.core.JsonParser.Feature.*;
-import static gov.ncbi.ids.RequestId.State.GOOD;
-import static gov.ncbi.ids.RequestId.State.INVALID;
-import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
-import static gov.ncbi.ids.RequestId.State.UNKNOWN;
-import static gov.ncbi.testing.TestHelper.assertThrows;
-import static gov.ncbi.ids.test.TestRequestId.checkState;
 import static gov.ncbi.ids.IdDbJsonReader.jsonFeatures;
-
+import static gov.ncbi.ids.RequestId.State.*;
+import static gov.ncbi.ids.test.TestRequestId.checkState;
+import static gov.ncbi.testing.TestHelper.assertThrows;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.URL;
@@ -23,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -38,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.typesafe.config.Config;
 
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
@@ -45,7 +38,6 @@ import gov.ncbi.ids.IdSet;
 import gov.ncbi.ids.IdType;
 import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
-import gov.ncbi.ids.RequestId.MaybeBoolean;
 import gov.ncbi.ids.VersionedIdSet;
 
 
@@ -63,7 +55,8 @@ public class TestIdResolver
     public TestName name = new TestName();
 
     // These point to the global static literature id db.
-    private static IdDb litIds = null;
+    private IdDb iddb;
+    private IdResolver resolver;
     private static IdType aiid;
     private static IdType doi;
     private static IdType mid;
@@ -74,9 +67,8 @@ public class TestIdResolver
     static final ObjectMapper realMapper = new ObjectMapper()
             .enable(jsonFeatures);
 
-
-    private final ObjectMapper mapper = new ObjectMapper()
-            .enable(jsonFeatures);
+    /////////////////////////////////////////////////////////////
+    // Set up the mocked ObjectMapper
 
     // Mock ObjectMapper
     static ObjectMapper mockMapper;
@@ -87,10 +79,6 @@ public class TestIdResolver
      * for every test.
      */
     static Map<String, JsonNode> mockResponseCache;
-
-
-    /////////////////////////////////////////////////////////////
-    // Methods related to mocking responses.
 
     /**
      * This function returns a JsonNode from a mock-response file, given
@@ -147,23 +135,56 @@ public class TestIdResolver
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////
+    // Test initializers. These don't use the `@Before` annotation,
+    // because some of the tests will have slightly different
+    // requirements, and I don't know how to parameterize the
+    // @Before.
 
-    @Before
-    public void initialize()
+    /**
+     * Initialize with the literature id database, and default config.
+     */
+    public void initLit()
         throws Exception
     {
-        litIds = IdDb.litIds();           // pmid, pmcid, mid, doi, aiid
-        pmid = litIds.getType("pmid");
-        pmcid = litIds.getType("pmcid");
-        mid = litIds.getType("mid");
-        doi = litIds.getType("doi");
-        aiid = litIds.getType("aiid");
+        initLit(null, null);
+    }
+
+    /**
+     * Initialize with the default config, but a different wantedIdType
+     */
+    public void initLit(String wanted)
+        throws Exception
+    {
+        initLit(null, wanted);
+    }
+
+    /**
+     * Initialize the iddb with the literature id database, with the
+     * given config, and the given wantedIdType
+     */
+    // default config (src/main/resources/reference.conf).
+    public void initLit(Config config, String wanted)
+        throws Exception
+    {
+        iddb = IdDb.getLiteratureIdDb(config);
+        String _wanted = wanted == null ? "pmid" : wanted;
+        IdType wantedType = iddb.getType(_wanted);
+        resolver = iddb.newResolver(wantedType);
+
+        // for convenience:
+        pmid = iddb.getType("pmid");
+        pmcid = iddb.getType("pmcid");
+        mid = iddb.getType("mid");
+        doi = iddb.getType("doi");
+        aiid = iddb.getType("aiid");
 
         // Reset the cache with every test
         mockResponseCache = new HashMap<String, JsonNode>();
 
         // This is the mock object
         mockMapper = mock(ObjectMapper.class);
+        resolver.setMapper(mockMapper);
 
         // Intercept calls to readTree()
         when(mockMapper.readTree((URL) any())).thenAnswer(
@@ -192,11 +213,11 @@ public class TestIdResolver
     public void testConstructor()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmid);
-        assertTrue(litIds == resolver.getIdDb());
+        initLit();
+        assertTrue(iddb == resolver.getIdDb());
         assertEquals(pmid, resolver.getWantedType());
 
-        log.debug(resolver.getConfig());
+        log.debug(resolver.dumpConfig());
     }
 
     /////////////////////////////////////////////////////////////
@@ -221,7 +242,6 @@ public class TestIdResolver
         assertNotNull(records);
         assertEquals(2, records.size());
         ObjectNode record0 = (ObjectNode) records.get(0);
-        ObjectNode record1 = (ObjectNode) records.get(1);
 
         TextNode pmcIdent = (TextNode) record0.get("pmcid");
         assertEquals("PMC3539452", pmcIdent.asText());
@@ -237,7 +257,7 @@ public class TestIdResolver
     public void testParseRequestIds()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmid);
+        initLit();
         List<RequestId> rids;
 
         rids = resolver.parseRequestIds("pMid", "12345,67890");
@@ -289,28 +309,27 @@ public class TestIdResolver
     public void testGroupsToResolve()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmid);
-
+        initLit();
         List<RequestId> rids;
 
-        RequestId rrid = new RequestId(litIds, "pmcid", "1234");
-        IdSet rset = new NonVersionedIdSet(litIds);
+        RequestId rrid = new RequestId(iddb, "pmcid", "1234");
+        IdSet rset = new NonVersionedIdSet(iddb);
         rset.add(pmcid.id("pmc1234"), doi.id("10.12/34/56"));
         rrid.resolve(rset);
 
         rids = Arrays.asList(
-            new RequestId(litIds, "pmid", "34567"),    //  0 - has wanted
-            new RequestId(litIds, "pmcid", "77898"),   //  1
-            (RequestId) null,                          //  2 - null
-            new RequestId(litIds, "mid", "MID7"),      //  3
-            new RequestId(litIds, "pmcid", "77a898"),  //  4 - bad
-            new RequestId(litIds, "pmid", "34567.5"),  //  5 - has wanted
-            new RequestId(litIds, "aiid", "77898"),    //  6
-            new RequestId(litIds, "pmcid", "34567"),   //  7
+            new RequestId(iddb, "pmid", "34567"),    //  0 - has wanted
+            new RequestId(iddb, "pmcid", "77898"),   //  1
+            (RequestId) null,                           //  2 - null
+            new RequestId(iddb, "mid", "MID7"),      //  3
+            new RequestId(iddb, "pmcid", "77a898"),  //  4 - bad
+            new RequestId(iddb, "pmid", "34567.5"),  //  5 - has wanted
+            new RequestId(iddb, "aiid", "77898"),    //  6
+            new RequestId(iddb, "pmcid", "34567"),   //  7
             rrid,                                      //  8 - already resolved
-            new RequestId(litIds, "blech", "77898"),   //  9 - bad
-            new RequestId(litIds, "pmcid", "77898.1"), // 10
-            new RequestId(litIds, "aiid", "778")       // 11
+            new RequestId(iddb, "blech", "77898"),   //  9 - bad
+            new RequestId(iddb, "pmcid", "77898.1"), // 10
+            new RequestId(iddb, "aiid", "778")       // 11
         );
 
         Map<IdType, List<RequestId>> groups = resolver.groupsToResolve(rids);
@@ -329,8 +348,7 @@ public class TestIdResolver
     public void testResolverUrl()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmid);
-
+        initLit();
         IdType fromType;
         List<RequestId> rids;
         URL requestURL;
@@ -338,8 +356,8 @@ public class TestIdResolver
         // Get the URL for two pmids that both need resolving
         fromType = pmid;
         rids = Arrays.asList(
-            new RequestId(litIds, "pmid", "34567"),
-            new RequestId(litIds, "pmid", "77898")
+            new RequestId(iddb, "pmid", "34567"),
+            new RequestId(iddb, "pmid", "77898")
         );
         log.trace("rids: " + rids);
         requestURL = resolver.resolverUrl(fromType, rids);
@@ -357,10 +375,10 @@ public class TestIdResolver
         );
 
         rids = Arrays.asList(
-                new RequestId(litIds, "pmcid", "123.34"),
-                new RequestId(litIds, "pmcid", "13.4"),
-                new RequestId(litIds, "pmcid", "333"),
-                new RequestId(litIds, "pmcid", "12")
+                new RequestId(iddb, "pmcid", "123.34"),
+                new RequestId(iddb, "pmcid", "13.4"),
+                new RequestId(iddb, "pmcid", "333"),
+                new RequestId(iddb, "pmcid", "12")
         );
         requestURL = resolver.resolverUrl(fromType, rids);
         assertTrue(requestURL.toString().endsWith(
@@ -377,7 +395,7 @@ public class TestIdResolver
     public void testRecordFromJson()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmcid);
+        initLit();
         ObjectNode jsonResp = getMockResponse("two-good-pmids");
         ArrayNode records = (ArrayNode) jsonResp.get("records");
         assertEquals(2, records.size());
@@ -412,7 +430,7 @@ public class TestIdResolver
     public void testIdSetFromJson1()
             throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, doi);
+        initLit();
         ObjectNode jsonResp = getMockResponse("three-versions");
         ArrayNode records = (ArrayNode) jsonResp.get("records");
         assertEquals(1, records.size());
@@ -446,7 +464,8 @@ public class TestIdResolver
     public void testBadResponse0()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, doi);
+        initLit("doi");
+
         ObjectNode jsonResp = getMockResponse("bad-response0");
 
         assertThrows(IOException.class, () -> {
@@ -469,7 +488,7 @@ public class TestIdResolver
     public void testBadResponse1()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, doi);
+        initLit("doi");
         ObjectNode jsonResp = getMockResponse("bad-response1");
 
         assertThrows(IOException.class, () -> {
@@ -481,7 +500,7 @@ public class TestIdResolver
     public void testIdResolver_0()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmcid, mockMapper);
+        initLit("pmcid");
         assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList = resolver.resolveIds("26829486,22368089");
@@ -497,7 +516,8 @@ public class TestIdResolver
     public void testIdResolver_1()
         throws Exception
     {
-        IdResolver resolver = new IdResolver(litIds, pmcid, mockMapper);
+        initLit("pmcid");
+        resolver.setMapper(mockMapper);
         assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList =

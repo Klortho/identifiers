@@ -48,7 +48,7 @@ public class TestIdParts
 
     @Before
     public void initialize() {
-        litIds = IdDb.litIds();           // pmid, pmcid, mid, doi, aiid
+        litIds = IdDb.getLiteratureIdDb();
         pmid = litIds.getType("pmid");
         pmcid = litIds.getType("pmcid");
         mid = litIds.getType("mid");

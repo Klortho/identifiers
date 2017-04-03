@@ -25,6 +25,7 @@ import gov.ncbi.ids.IdParser.IdMatchData;
 
 public class TestIdParser
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdParser.class);
 
     @Rule
@@ -52,7 +53,7 @@ public class TestIdParser
         //log.debug("idp0: " + idp0.toString());
         //assertEquals("/[aA][bB](\\d\\d)/ versioned", idp.toString());
 
-        IdParser idp1 = new IdParser(regexp, false, UPPERCASE);
+        //IdParser idp1 = new IdParser(regexp, false, UPPERCASE);
         //log.debug("idp1: " + idp1.toString());
         //assertEquals("/[aA][bB](\\d\\d)/ non-versioned", idp1.toString());
     }

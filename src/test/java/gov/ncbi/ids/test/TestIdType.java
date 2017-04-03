@@ -30,6 +30,7 @@ import gov.ncbi.ids.Identifier;
 
 public class TestIdType
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdType.class);
 
     @Rule

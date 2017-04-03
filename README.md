@@ -116,11 +116,10 @@ plugin](http://maven.apache.org/surefire/maven-surefire-plugin/),
 for more options.
 
 
-### Log configuration during testing
+### Logging tests
 
-When testing, the log is configured with src/test/resources/log4j.properties.
-
-
+When testing, the log gets its configuration from
+src/test/resources/log4j.properties.
 
 
 ## Configuration
@@ -129,7 +128,30 @@ This library uses the [typesafehub
 Config](https://typesafehub.github.io/config/) library for configuration,
 which affords several ways of specifying configuration information.
 
+The library defaults are set in src/main/resources/reference.conf.
 
+Typically, an application will set configuration values for this library
+in its own application.conf file, and then initialize with:
+
+```java
+import com.typesafe.config.Config;
+import gov.ncbi.ids.IdDb;
+
+public class MyApp {
+    private config;
+    public MyApp() {
+        config = ConfigFactory.load();
+        IdDb iddb = new IdDb(config);
+```
+
+
+
+You can also set a new value on the command line, by setting the system
+property. For example:
+
+```
+mvn -Dcache-enabled=true test
+```
 
 
 

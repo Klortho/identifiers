@@ -5,6 +5,7 @@ import static gov.ncbi.ids.IdParser.UPPERCASE;
 import static gov.ncbi.ids.IdParser.replacer;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,10 +15,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.spaceprogram.kittycache.KittyCache;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * This is the main entry point into the Identifier library. You can instantiate an
@@ -36,6 +40,11 @@ public class IdDb
     private String name;
 
     /**
+     * The config object acts as defaults for every new IdResolver.
+     */
+    private Config config;
+
+    /**
      *  All IdTypes, in precedence order
      */
     private ArrayList<IdType> types = new ArrayList<IdType>();
@@ -46,16 +55,44 @@ public class IdDb
     private Map<String, IdType> byName = new HashMap<String, IdType>();
 
     /**
-     * Construct with a name. Because the data structure has circular
+     * FIXME: need to write unit tests for the cache.
+     *
+     * If caching is enabled, the results returned from the external ID
+     * resolver service are cached here. The keys of this are all of the
+     * known CURIEs for the Identifiers for any given IdSet that gets
+     * instantiated.
+     */
+    KittyCache<String, IdSet> idSetCache;
+
+
+    /**
+     * Construct with a name and a Config object. If `config` is null,
+     * this will use the default config. Note that you can override
+     * individual config values by setting system properties.
+     *
+     * Implementation note: Because the data structure has circular
      * references, it needs to be created without IdTypes first. The
      * IdTypes are then instantiated and added later.
      */
-    public IdDb(String name) {
+    public IdDb(String name, Config config) {
         this.name = name;
+        if (config == null) this.config = ConfigFactory.load();
+        else {
+            // Validate user-supplied config
+            config.checkValid(ConfigFactory.defaultReference(), "reference.conf");
+            this.config = config;
+        }
+    }
+
+    public IdDb(String name) {
+        this(name, null);
     }
 
     /**
-     * Add an IdType to this database.
+     * Add an IdType to this database. The order in which the IdTypes are
+     * added is significant, because it determines the order in which the
+     * regular expression will be matched against the id string value,
+     * and the first match wins.
      */
     public IdDb addType(IdType type) {
         this.types.add(type);
@@ -97,6 +134,13 @@ public class IdDb
     }
 
     /**
+     * Get the Config object.
+     */
+    public Config getConfig() {
+        return config;
+    }
+
+    /**
      * Get the list of IdTypes
      */
     public List<IdType> getTypes() {
@@ -128,7 +172,19 @@ public class IdDb
     }
 
     /////////////////////////////////////////////////////////////////////
-    // Utility functions
+    // Create a new IdResolver
+
+    public IdResolver newResolver(IdType wantedType, Config config)
+            throws MalformedURLException
+    {
+        return new IdResolver(this, wantedType, this.config.withFallback(config));
+    }
+
+    public IdResolver newResolver(IdType wantedType)
+        throws MalformedURLException
+    {
+        return new IdResolver(this, wantedType, this.config);
+    }
 
     /////////////////////////////////////////////////////////////////////
     // Methods to process user-supplied ID strings
@@ -247,46 +303,52 @@ public class IdDb
 
 
     /**
-     * This static, predefined, IdDb is available to other apps. It
-     * contains IdTypes used by literature resources. It is accessed
-     * via a getter to make sure there are no synchronization issues
-     * at startup.
+     * This is used as a lock for a thread-synchronized operation below.
      */
     private static Object _litIdsLock = new Object();
-    private static IdDb _litIds = null;
-    public static IdDb litIds() {
-        synchronized(_litIdsLock) {
-            if (_litIds != null) return _litIds;
-            _litIds = (new IdDb("literature-ids"))
 
-            // The order in which the IdTypes appear
-            // determines which regular expressions get tried first. For example,
-            // the string "PMC12345" matches patterns of both pmcid and mid,
-            // but since pmcid appears first, it will match that type.
-            .addTypes(
-                new ArrayList<IdType>(Arrays.asList(
-                    new IdType("pmid", new ArrayList<IdParser>(Arrays.asList(
-                        new IdParser("\\d+", false, NOOP),
-                        new IdParser("\\d+(\\.\\d+)?", true, NOOP)
-                    ))),
-                    new IdType("pmcid", new ArrayList<IdParser>(Arrays.asList(
-                        new IdParser("(\\d+)", false, replacer("PMC$1")),
-                        new IdParser("(\\d+(\\.\\d+)?)", true, replacer("PMC$1")),
-                        new IdParser("[Pp][Mm][Cc]\\d+", false, UPPERCASE),
-                        new IdParser("[Pp][Mm][Cc]\\d+(\\.\\d+)?", true, UPPERCASE)
-                    ))),
-                    new IdType("mid", new ArrayList<IdParser>(Arrays.asList(
-                        new IdParser("[A-Za-z]+\\d+", true, UPPERCASE)
-                    ))),
-                    new IdType("doi", new ArrayList<IdParser>(Arrays.asList(
-                        new IdParser("10\\.\\d+\\/.*", false, NOOP)
-                    ))),
-                    new IdType("aiid", new ArrayList<IdParser>(Arrays.asList(
-                        new IdParser("\\d+", true, NOOP)
-                    )))
-                ))
-            );
-            return _litIds;
+    /**
+     * Get a fresh copy of the literature id database, using the default
+     * config. A new copy is made
+     * in order to minimize the probability of different threads interfering
+     * with each other.
+     * @return
+     */
+    public static IdDb getLiteratureIdDb() {
+        return getLiteratureIdDb(null);
+    }
+
+    /**
+     * Get a fresh copy of the literature id database, with some configuration
+     * overrides. If `config == null`, this just uses the default config.
+     */
+    public static IdDb getLiteratureIdDb(Config config) {
+        synchronized(_litIdsLock) {
+            List<IdType> typeList = new ArrayList<IdType>(Arrays.asList(
+                new IdType("pmid", new ArrayList<IdParser>(Arrays.asList(
+                    new IdParser("\\d+", false, NOOP),
+                    new IdParser("\\d+(\\.\\d+)?", true, NOOP)
+                ))),
+                new IdType("pmcid", new ArrayList<IdParser>(Arrays.asList(
+                    new IdParser("(\\d+)", false, replacer("PMC$1")),
+                    new IdParser("(\\d+(\\.\\d+)?)", true, replacer("PMC$1")),
+                    new IdParser("[Pp][Mm][Cc]\\d+", false, UPPERCASE),
+                    new IdParser("[Pp][Mm][Cc]\\d+(\\.\\d+)?", true, UPPERCASE)
+                ))),
+                new IdType("mid", new ArrayList<IdParser>(Arrays.asList(
+                    new IdParser("[A-Za-z]+\\d+", true, UPPERCASE)
+                ))),
+                new IdType("doi", new ArrayList<IdParser>(Arrays.asList(
+                    new IdParser("10\\.\\d+\\/.*", false, NOOP)
+                ))),
+                new IdType("aiid", new ArrayList<IdParser>(Arrays.asList(
+                    new IdParser("\\d+", true, NOOP)
+                )))
+            ));
+
+            IdDb _literatureIdDb = new IdDb("literature-ids", config);
+            _literatureIdDb.addTypes( typeList );
+            return _literatureIdDb;
         }
     }
 }

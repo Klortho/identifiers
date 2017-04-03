@@ -18,11 +18,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.spaceprogram.kittycache.KittyCache;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * This class resolves IDs entered by the user, using the PMC ID Converter
@@ -37,30 +34,21 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 public class IdResolver
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdResolver.class);
+
+    private final IdDb iddb;
+    private final IdType wantedType;
+    private Config config;
 
     public final boolean cacheEnabled;
     public final int cacheTtl;
     public final int cacheSize;
-    public final URL converterUrl;
+    public final URL converterBase;
     public final String converterParams;
 
-    private final IdDb iddb;
-    private final IdType wantedType;
-
     /// The computed base URL of the converter service.
-    public final String idConverterBase;
-
-    /**
-     * FIXME: this cache should move to IdDb.
-     * FIXME: need to write unit tests for the cache.
-     *
-     * If caching is enabled, the results returned from the external ID
-     * resolver service are cached here. The keys of this are all of the
-     * known CURIEs for the Identifiers for any given IdSet that gets
-     * instantiated.
-     */
-    KittyCache<String, IdSet> idSetCache;
+    public final String converterUrl;
 
     /// This is used to parse JSON
     private ObjectMapper mapper;
@@ -68,7 +56,6 @@ public class IdResolver
     /**
      * The JSON response from the service typically has Id fields mixed
      * in with metadata fields. Here are the known metadata field keys.
-     */
     private static final List<String> nonIdFields = Arrays.asList(
         new String[] {
           "versions",
@@ -79,52 +66,48 @@ public class IdResolver
           "release-date",
         }
     );
+     */
 
     /**
-     * Create a new IdResolver object.
-     * @param iddb - the IdDb in effect
+     * Create a new IdResolver object. This should not be called directly.
+     * @param iddb - the IdDb in effect; contains the config.
      * @param wantedType - requested IDs will be resolved, if needed, to get
      *   an Identifier of this type
      * @throws MalformedURLException  If, via the Config setup, the URL to the
      *   backend service is no good.
      */
-    public IdResolver(IdDb iddb, IdType wantedType)
+    protected IdResolver(IdDb iddb, IdType wantedType, Config _config)
         throws MalformedURLException
     {
-        this(iddb, wantedType, null);
+        this.iddb = iddb;
+        this.wantedType = wantedType;
+        this.config = _config;
+
+        this.cacheEnabled = this.config.getBoolean("ncbi-ids.cache-enabled");
+        this.cacheTtl = this.config.getInt("ncbi-ids.cache-ttl");
+        this.cacheSize = this.config.getInt("ncbi-ids.cache-size");
+        this.converterBase = new URL(this.config.getString("ncbi-ids.converter-base"));
+        this.converterParams = this.config.getString("ncbi-ids.converter-params");
+
+        this.converterUrl = converterBase + "?" + converterParams + "&";
+        this.mapper = mapper == null ? new ObjectMapper() : mapper;
     }
 
     /**
-     * Construct while passing in an ObjectMapper. This allows us to mock it
-     * for unit tests.
+     * This is only used for testing, to enable setting the JSON object mapper
+     * to a mocked object.
      */
-    public IdResolver(IdDb iddb, IdType wantedType, ObjectMapper mapper)
-        throws MalformedURLException
-    {
-        Config conf = ConfigFactory.load();
-        this.cacheEnabled = conf.getBoolean("ncbi-ids.cache-enabled");
-        this.cacheTtl = conf.getInt("ncbi-ids.cache-ttl");
-        this.cacheSize = conf.getInt("ncbi-ids.cache-size");
-        this.converterUrl = new URL(conf.getString("ncbi-ids.converter-url"));
-        this.converterParams = conf.getString("ncbi-ids.converter-params");
-
-        this.iddb = iddb;
-        this.wantedType = wantedType;
-        this.idConverterBase = converterUrl + "?" + converterParams + "&";
-        this.mapper = mapper == null ? new ObjectMapper() : mapper;
-
-        //log.debug("Instantiating idSetCache, size = " + cacheSize +
-        //        ", time-to-live = " + cacheTtl);
-        this.idSetCache = new KittyCache<>(cacheSize);
+    public void setMapper(ObjectMapper mapper) {
+        this.mapper = mapper;
     }
 
     // For debugging
-    public String getConfig() {
+    public String dumpConfig() {
         return "config: {\n" +
                 "  cache-enabled: " + cacheEnabled + "\n" +
                 "  cache-ttl: " + cacheTtl + "\n" +
                 "  cache-size: " + cacheSize + "\n" +
-                "  converter-url: " + converterUrl + "\n" +
+                "  converter-base: " + converterBase + "\n" +
                 "  converter-params: " + converterParams + "\n" +
                 "}";
     }
@@ -153,12 +136,12 @@ public class IdResolver
      *   ID value string is resolved to an Identifier with the wantedType.
      *
      * For reference, here's the list of routines this calls:
-     * -/ parseRequestIds(String, String)  - create a new list of RequestId's
+     * - parseRequestIds(String, String)  - create a new list of RequestId's
      *     - new RequestId(IdDb, String, String)
-     * -/ groupsToResolve(List<RequestId>)  - group them by type
-     * -/ resolverUrl(IdType, List<RequestId>  - form the URL for the request
-     * -  recordFromJson(ObjectNode, IdNonVersionSet)  - parse the result
-     * -  findAndBind(IdType, List<RequestId>, IdSet)  - write result to list
+     * - groupsToResolve(List<RequestId>)  - group them by type
+     * - resolverUrl(IdType, List<RequestId>  - form the URL for the request
+     * - recordFromJson(ObjectNode, IdNonVersionSet)  - parse the result
+     * - findAndBind(IdType, List<RequestId>, IdSet)  - write result to list
      */
     public List<RequestId> resolveIds(String values)
             throws IOException
@@ -298,13 +281,13 @@ public class IdResolver
 
         try {
             String typeStr = rids.get(0).getMainType().getName();
-            return new URL(idConverterBase + "idtype=" + typeStr +
+            return new URL(converterUrl + "idtype=" + typeStr +
                 "&ids=" + idsStr);
         }
         catch (MalformedURLException e) {
             throw new IllegalArgumentException(
                 "Parameters must have a problem; got malformed URL for " +
-                "upstream service '" + converterUrl + "'");
+                "upstream service '" + converterBase + "'");
         }
     }
 
@@ -416,8 +399,6 @@ public class IdResolver
         Iterator<Map.Entry<String, JsonNode>> i = record.fields();
         while (i.hasNext()) {
             Map.Entry<String, JsonNode> field = i.next();
-            String key = field.getKey();
-
             if (checkStatusField.check(field, set)) continue;
             if (checkIdField.check(field, set)) continue;
             if (checkCurrentField.check(field, set)) continue;

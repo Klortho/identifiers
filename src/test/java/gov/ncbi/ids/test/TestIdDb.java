@@ -1,11 +1,7 @@
 package gov.ncbi.ids.test;
 
 import static gov.ncbi.ids.test.TestIdentifier.checkId;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.URL;
@@ -37,6 +33,7 @@ import gov.ncbi.ids.Identifier;
 @RunWith(Parameterized.class)
 public class TestIdDb
 {
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdDb.class);
 
     public static final String TEST_ID_DATABASE = "litids-db.json";
@@ -57,7 +54,7 @@ public class TestIdDb
         throws IOException
     {
         if (iddbSource.equals("global"))
-            this.iddb = IdDb.litIds();
+            this.iddb = IdDb.getLiteratureIdDb();
         else if (iddbSource.equals("json-url"))
             this.iddb = fromJsonUrl();
         else if (iddbSource.equals("json-string"))
