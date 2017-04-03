@@ -26,10 +26,9 @@ public class NonVersionedIdSet extends IdSet
     private final List<VersionedIdSet> kids;
 
     /**
-     * If this is non-version-specific, this will refer to the current
-     * version
+     * The current version of this work. This can only be set once.
      */
-    private VersionedIdSet current;
+    private VersionedIdSet current = null;
 
     ////////////////////////////////////////
     // Constructors and builder methods
@@ -73,6 +72,12 @@ public class NonVersionedIdSet extends IdSet
     @Override
     public VersionedIdSet getCurrent() {
         return current;
+    }
+
+    public void setCurrent(VersionedIdSet kid) {
+        if (current != null)
+            throw new IllegalArgumentException("Current version already set");
+        current = kid;
     }
 
     @Override

@@ -1,8 +1,12 @@
 package gov.ncbi.ids.test;
 
+import static com.fasterxml.jackson.core.JsonParser.Feature.*;
 import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
 import static gov.ncbi.ids.RequestId.State.UNKNOWN;
 import static gov.ncbi.testing.TestHelper.assertThrows;
+
+import static gov.ncbi.ids.IdDbJsonReader.jsonFeatures;
+
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -65,7 +69,12 @@ public class TestIdResolver
     private static IdType pmid;
 
     // Real ObjectMapper for reading JSON from local filesystem
-    static final ObjectMapper realMapper = new ObjectMapper();
+    static final ObjectMapper realMapper = new ObjectMapper()
+            .enable(jsonFeatures);
+
+
+    private final ObjectMapper mapper = new ObjectMapper()
+            .enable(jsonFeatures);
 
     // Mock ObjectMapper
     static ObjectMapper mockMapper;
@@ -358,11 +367,13 @@ public class TestIdResolver
     }
 
     /**
-     * Verify that this generates a good IdSet from one record of
-     * a JSON response.
+     * Uses two-good-pmids.json.
+     * Verify that this generates good IdSets from a JSON response
+     * of the ID resolver. Also tests that the `current` field can
+     * be either a string or a boolean.
      */
     @Test
-    public void testRecordFromJson0()
+    public void testRecordFromJson()
         throws Exception
     {
         IdResolver resolver = new IdResolver(litIds, pmcid);
@@ -370,20 +381,34 @@ public class TestIdResolver
         ArrayNode records = (ArrayNode) jsonResp.get("records");
         assertEquals(2, records.size());
 
-        ObjectNode record0 = (ObjectNode) records.get(0);
-        NonVersionedIdSet parent0 =
-            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
-        //log.debug("Made IdSet " + parent0.dump());
-        assertFalse(parent0.isVersioned());
+        ObjectNode recordA = (ObjectNode) records.get(0);
+        NonVersionedIdSet parentA =
+            (NonVersionedIdSet) resolver.readIdSet(recordA);
+        log.debug("From two-good-pmids.json, parentA: " +
+            parentA.dump());
+        assertFalse(parentA.isVersioned());
+        assertEquals("PMC3539452", parentA.getId(pmcid).getValue());
 
         // check the versioned kids
-        List<VersionedIdSet> kids0 = parent0.getVersions();
-        assertEquals(1, kids0.size());
-        VersionedIdSet kid00 = kids0.get(0);
-        assertSame(parent0.getCurrent(), kid00);
-        assertEquals(pmcid.id("PMC3539452.1"), kid00.getId(pmcid));
+        List<VersionedIdSet> kidsA = parentA.getVersions();
+        assertEquals(1, kidsA.size());
+        VersionedIdSet kidA0 = kidsA.get(0);
+        assertTrue(kidA0.isCurrent());
+        assertSame(parentA.getCurrent(), kidA0);
+        assertEquals(pmcid.id("PMC3539452.1"), kidA0.getId(pmcid));
+
+        NonVersionedIdSet parentB =
+            (NonVersionedIdSet) resolver.readIdSet(
+                (ObjectNode) records.get(1));
+        assertEquals("26829486", parentB.getId(pmid).getValue());
+        List<VersionedIdSet> kidsB = parentB.getVersions();
+        assertEquals(kidsB.get(0), parentB.getCurrent());
     }
 
+    /**
+     * Uses three-versions.json. Tests that a good IdSet "family"
+     * is created for an article that has three separate versions.
+     */
     @Test
     public void testIdSetFromJson1()
             throws Exception
@@ -394,8 +419,8 @@ public class TestIdResolver
         assertEquals(1, records.size());
 
         NonVersionedIdSet parent =
-            (NonVersionedIdSet) resolver.idSetFromJson(
-                (ObjectNode) records.get(0), null);
+            (NonVersionedIdSet) resolver.readIdSet(
+                (ObjectNode) records.get(0));
         List<VersionedIdSet> kids = parent.getVersions();
         assertEquals(3, kids.size());
 
@@ -415,28 +440,42 @@ public class TestIdResolver
         assertEquals(pmcid.id("PMC1868567.3"), kid2.getId(pmcid));
     }
 
+    /**
+     * Tests the "current" field.
+     */
     @Test
     public void testBadResponse0()
         throws Exception
     {
         IdResolver resolver = new IdResolver(litIds, doi);
         ObjectNode jsonResp = getMockResponse("bad-response0");
-        ObjectNode record0 = (ObjectNode) jsonResp.get("records").get(0);
-        NonVersionedIdSet parent =
-            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
-        assertNull(parent);
-    }
 
+        assertThrows(IOException.class, () -> {
+            resolver.readIdSet(jsonResp.get("records").get(0));
+        });
+
+        assertThrows(IOException.class, () -> {
+            resolver.readIdSet(jsonResp.get("records").get(1));
+        });
+
+        assertThrows(IOException.class, () -> {
+            resolver.readIdSet(jsonResp.get("records").get(2));
+        });
+}
+
+    /**
+     * A record that has more than bad ID values should fail.
+     */
     @Test
     public void testBadResponse1()
         throws Exception
     {
         IdResolver resolver = new IdResolver(litIds, doi);
         ObjectNode jsonResp = getMockResponse("bad-response1");
-        ObjectNode record0 = (ObjectNode) jsonResp.get("records").get(0);
-        NonVersionedIdSet parent =
-            (NonVersionedIdSet) resolver.idSetFromJson(record0, null);
-        assertNull(parent);
+
+        assertThrows(IOException.class, () -> {
+            resolver.readIdSet(jsonResp.get("records").get(0));
+        });
     }
 
 

@@ -67,6 +67,7 @@ public abstract class IdSet extends Id
 
             // All good
             this.idByType.put(type, id);
+            //iddb.cacheId(id);
         }
         return this;
     }

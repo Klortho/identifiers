@@ -112,7 +112,7 @@ public class TestHelper
     }
 
     public interface TestLambda {
-        public void run();
+        public void run() throws Exception;
     }
 
 }

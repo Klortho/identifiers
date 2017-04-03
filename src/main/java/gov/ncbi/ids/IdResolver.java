@@ -215,10 +215,16 @@ public class IdResolver
 
                 ArrayNode records = (ArrayNode) response.get("records");
                 for (JsonNode record : records) {
-                    IdSet set = idSetFromJson((ObjectNode) record, null);
-                    log.debug("Constructed an id set: " + set);
-                    if (set == null) continue;
-                    findAndBind(fromType, gRids, set);
+                    try {
+                        IdSet set = readIdSet((ObjectNode) record);
+                        log.debug("Constructed an id set: " + set);
+                        if (set == null) continue;
+                        findAndBind(fromType, gRids, set);
+                    }
+                    catch (IOException e) {
+                        log.error(e.getMessage());
+                        continue;
+                    }
                 }
             }
         }
@@ -313,7 +319,6 @@ public class IdResolver
         throws IOException
     {
         String msg = "Error processing JSON response from ID resolver: " + cause;
-        log.error(msg);
         throw new IOException(msg);
     }
 
@@ -330,87 +335,118 @@ public class IdResolver
      * @throws IOException  if the argument is not a valid boolean, as
      *   described above.
      */
-    private boolean readBoolean(JsonNode bnode, boolean required)
+    public boolean readBoolean(JsonNode bnode, boolean required)
         throws IOException
     {
         if (bnode == null) {
             if (required) badJson("Missing boolean value");
             else return false;
         }
-        if (bnode.isBoolean() && !bnode.isTextual())
-            badJson("Invalid format for a boolean value");
-        return bnode.asBoolean();
+        if (bnode.isBoolean()) return bnode.asBoolean();
+        if (bnode.isTextual()) {
+            String bstr = bnode.asText();
+            if (bstr.equals("true")) return true;
+            if (bstr.equals("false")) return false;
+            badJson("Expected a boolean value 'true' or 'false'");
+        }
+        badJson("Expected a boolean value");
+        return false;
     }
+
+    public interface FieldHandler {
+        boolean check(Map.Entry<String, JsonNode> field, IdSet set)
+            throws IOException;
+    }
+
+    FieldHandler c = (field, set) -> { return true; };
+
+    FieldHandler checkStatusField = (field, set) -> {
+        if (!field.getKey().equals("status")) return false;
+        JsonNode statusNode = field.getValue();
+        String status = statusNode.asText();
+        if (!status.equals("success"))
+            badJson("ID resolver reports bad status: " + status);
+        return true;
+    };
+
+    FieldHandler checkIdField = (field, set) -> {
+        String key = field.getKey();
+        IdType idType = set.iddb.getType(key);
+        if (idType == null) return false;
+
+        // The response includes an aiid for the parent, but that's
+        // redundant, since the same aiid always also appears in a
+        // version-specific child.
+        if (key.equals("aiid") && !set.isVersioned()) return true;
+
+        String value = field.getValue().asText();
+        Identifier id = idType.id(value);
+        if (id == null) badJson("Couldn't parse identifier of type " +
+            idType + ": " + value);
+
+        set.add(id);
+        return true;
+    };
+
+    FieldHandler checkCurrentField = (field, set) -> {
+        if (!field.getKey().equals("current")) return false;
+        if (!set.isVersioned()) badJson("`current` field on parent node");
+
+        boolean current = readBoolean(field.getValue(), false);
+        try {
+            if (current) ((VersionedIdSet) set).setIsCurrent();
+        }
+        catch (IllegalArgumentException e) {
+            throw new IOException(
+                "`current` set to true on more than one version children");
+        }
+        return true;
+    };
 
     /**
      * Helper function that reads all the `idtype: idvalue` fields in a
      * JSON object, creates Identifiers and adds them to IdSets.
      */
-    private void _addIdsFromJson(IdSet self, boolean isParent,
-            Iterator<Map.Entry<String, JsonNode>> i)
+    private void dispatchJsonFields(IdSet set, JsonNode record)
+        throws IOException
     {
+        Iterator<Map.Entry<String, JsonNode>> i = record.fields();
         while (i.hasNext()) {
-            Map.Entry<String, JsonNode> pair = i.next();
-            String key = pair.getKey();
-            //log.debug("      key: " + key);
-            if (!nonIdFields.contains(key)) {
-                // The response includes an aiid for the parent, but that's
-                // redundant, since the same aiid always also appears in a
-                // version-specific child.
-                if (isParent && key.equals("aiid")) continue;
+            Map.Entry<String, JsonNode> field = i.next();
+            String key = field.getKey();
 
-                IdType idType = iddb.getType(key);
-                if (idType == null) continue;
-
-                String value = pair.getValue().asText();
-                Identifier id = idType.id(value);
-                if (id == null) continue;
-
-                self.add(id);
-                if (idGlobCache != null) {
-                    idGlobCache.put(id.getCurie(), self, cacheTtl);
-                }
-            }
+            if (checkStatusField.check(field, set)) continue;
+            if (checkIdField.check(field, set)) continue;
+            if (checkCurrentField.check(field, set)) continue;
         }
     }
 
     /**
-     * Helper function to create an IdSet object out of a single JSON record
-     * from the id converter. See src/test/resources/ for examples.
-     * @returns  An IdSet object, or null if there was a syntax error.
+     * Helper function to create the parent IdSet object out of a single JSON
+     * record from the id converter. See src/test/resources/ for examples.
+     * @returns  An NonVersionedIdSet object, or null if there was a syntax error.
      */
-    public IdSet idSetFromJson(ObjectNode record, NonVersionedIdSet parent)
+    public NonVersionedIdSet readIdSet(JsonNode jrecord)
+        throws IOException
     {
         synchronized(this) {
-          try {
-            boolean isParent = (parent == null);
+            ObjectNode record = (ObjectNode) jrecord;
+            NonVersionedIdSet self = new NonVersionedIdSet(iddb);
+            dispatchJsonFields(self, record);
 
-            JsonNode status = record.get("status");
-            if (status != null && !status.asText().equals("success"))
-                return null;
-
-            if (isParent) {
-                NonVersionedIdSet pself = new NonVersionedIdSet(iddb);
-                _addIdsFromJson(pself, true, record.fields());
-                ArrayNode versionsNode = (ArrayNode) record.get("versions");
-                for (JsonNode kidRecord : versionsNode) {
-                    idSetFromJson((ObjectNode) kidRecord, pself);
-                }
-                return pself;
+            ArrayNode versionsNode = (ArrayNode) record.get("versions");
+            for (JsonNode kidRecord : versionsNode) {
+                readVersion((ObjectNode) kidRecord, self);
             }
-            else {
-                boolean isCurrent =
-                    readBoolean(record.get("current"), false);
-                VersionedIdSet kself = new VersionedIdSet(parent, isCurrent);
-                _addIdsFromJson(kself, false, record.fields());
-                //log.debug("    This is kid node after parsing: " + kself);
-                return kself;
-            }
-          }
-          catch (IOException e) {
-              return null;
-          }
+            return self;
         }
+    }
+
+    public void readVersion(ObjectNode record, NonVersionedIdSet parent)
+        throws IOException
+    {
+        VersionedIdSet kself = new VersionedIdSet(parent);
+        dispatchJsonFields(kself, record);
     }
 
     /**

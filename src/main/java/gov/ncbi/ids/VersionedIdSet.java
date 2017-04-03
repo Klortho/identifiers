@@ -24,12 +24,22 @@ public class VersionedIdSet extends IdSet
 
     /**
      * Create a new version-specific IdSet, and add this to the list
-     * of the parent's kids.
+     * of the parent's kids. This form of the constructor lets you
+     * specify that this is the current version, at the time it is
+     * created.
      */
     public VersionedIdSet(NonVersionedIdSet parent, boolean isCurrent) {
         super(parent.iddb);
         _parent = parent;
         _parent._addVersion(this, isCurrent);
+    }
+
+    /**
+     * Create a new version-specific IdSet, and add this to the list
+     * of the parent's kids.
+     */
+    public VersionedIdSet(NonVersionedIdSet parent) {
+        this(parent, false);
     }
 
     @Override
@@ -53,6 +63,13 @@ public class VersionedIdSet extends IdSet
      */
     public NonVersionedIdSet getParent() {
         return _parent;
+    }
+
+    /**
+     * Makes this version the current version
+     */
+    public void setIsCurrent() {
+        this._parent.setCurrent(this);
     }
 
     /**

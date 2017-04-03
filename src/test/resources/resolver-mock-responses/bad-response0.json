@@ -2,7 +2,10 @@
   "status": "ok",
   "responseDate": "2017-03-16 13:54:14",
   "request": "tool=my_tool;email=my_email%40example.com;ids=10.1007%2Fs10162-007-0081-z;showaiid=yes;format=json",
+
   "records": [
+
+    // 0. Having a `current` node on the parent causes it to fail.
     {
       "pmcid": "PMC1868567",
       "pmid": "17401604",
@@ -18,6 +21,55 @@
         {
           "pmcid": "PMC1868567.2",
           "aiid": "1950588"
+        },
+        {
+          "pmcid": "PMC1868567.3",
+          "aiid": "2538359",
+          "current": "true"
+        }
+      ]
+    },
+
+    // 1. Bad value for `current`
+    {
+      "pmcid": "PMC1868567",
+      "pmid": "17401604",
+      "aiid": "2538359",
+      "doi": "10.1007/s10162-007-0081-z",
+      "versions": [
+        {
+          "pmcid": "PMC1868567.1",
+          "mid": "NIHMS20955",
+          "aiid": "1868567"
+        },
+        {
+          "pmcid": "PMC1868567.2",
+          "aiid": "1950588"
+        },
+        {
+          "pmcid": "PMC1868567.3",
+          "aiid": "2538359",
+          "current": "trued"
+        }
+      ]
+    },
+
+    // 2. Having multiple `current` kids causes it to fail.
+    {
+      "pmcid": "PMC1868567",
+      "pmid": "17401604",
+      "aiid": "2538359",
+      "doi": "10.1007/s10162-007-0081-z",
+      "versions": [
+        {
+          "pmcid": "PMC1868567.1",
+          "mid": "NIHMS20955",
+          "aiid": "1868567"
+        },
+        {
+          "pmcid": "PMC1868567.2",
+          "aiid": "1950588",
+          "current": true
         },
         {
           "pmcid": "PMC1868567.3",

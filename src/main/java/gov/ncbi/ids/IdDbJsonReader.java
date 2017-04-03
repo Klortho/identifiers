@@ -23,6 +23,7 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -37,17 +38,21 @@ public class IdDbJsonReader
 {
     private static final Logger log = LoggerFactory.getLogger(IdDbJsonReader.class);
 
+    public static final JsonParser.Feature[] jsonFeatures = {
+        ALLOW_COMMENTS,
+        ALLOW_NON_NUMERIC_NUMBERS,
+        ALLOW_UNQUOTED_FIELD_NAMES,
+        ALLOW_NUMERIC_LEADING_ZEROS,
+        ALLOW_SINGLE_QUOTES,
+        STRICT_DUPLICATE_DETECTION
+    };
+
     /**
      * Jackson ObjectMapper. Note that ALLOW_TRAILING_COMMA won't
      * be available until version 2.9.
      */
     private final ObjectMapper mapper = new ObjectMapper()
-            .enable(ALLOW_COMMENTS,
-                    ALLOW_NON_NUMERIC_NUMBERS,
-                    ALLOW_UNQUOTED_FIELD_NAMES,
-                    ALLOW_NUMERIC_LEADING_ZEROS,
-                    ALLOW_SINGLE_QUOTES,
-                    STRICT_DUPLICATE_DETECTION);
+            .enable(jsonFeatures);
 
     /**
      * Read an IdDb object from a JSON string
