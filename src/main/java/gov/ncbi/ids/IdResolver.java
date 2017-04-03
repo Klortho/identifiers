@@ -76,13 +76,14 @@ public class IdResolver
      * @throws MalformedURLException  If, via the Config setup, the URL to the
      *   backend service is no good.
      */
-    protected IdResolver(IdDb iddb, IdType wantedType, Config _config)
+    protected IdResolver(IdDb iddb, Config _config)
         throws MalformedURLException
     {
         this.iddb = iddb;
-        this.wantedType = wantedType;
         this.config = _config;
 
+        this.wantedType = //wantedType;
+                iddb.getType(this.config.getString("ncbi-ids.wants-type"));
         this.cacheEnabled = this.config.getBoolean("ncbi-ids.cache-enabled");
         this.cacheTtl = this.config.getInt("ncbi-ids.cache-ttl");
         this.cacheSize = this.config.getInt("ncbi-ids.cache-size");
@@ -90,7 +91,6 @@ public class IdResolver
         this.converterParams = this.config.getString("ncbi-ids.converter-params");
 
         this.converterUrl = converterBase + "?" + converterParams + "&";
-        this.mapper = mapper == null ? new ObjectMapper() : mapper;
     }
 
     /**

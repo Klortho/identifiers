@@ -108,7 +108,7 @@ You can use wildcards; for example:
 
 ```
 mvn '-Dtest=Test*' test
-mvn -Dtest='*Transform*' test
+mvn -Dtest='*Req*' test
 ```
 
 See the documentation of the [Maven Surefire
@@ -118,15 +118,18 @@ for more options.
 
 ### Logging tests
 
-When testing, the log gets its configuration from
+When testing, the log gets its configuration from the properties file
 src/test/resources/log4j.properties.
+
+When this is used as a library, the application is responsible for configuring
+the logs. If nothing is specified, these log methods default to "no-op".
 
 
 ## Configuration
 
 This library uses the [typesafehub
 Config](https://typesafehub.github.io/config/) library for configuration,
-which affords several ways of specifying configuration information.
+which affords several ways of specifying configuration metadata.
 
 The library defaults are set in src/main/resources/reference.conf.
 

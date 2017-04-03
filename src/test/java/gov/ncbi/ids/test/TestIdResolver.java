@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
@@ -160,17 +161,29 @@ public class TestIdResolver
     }
 
     /**
+     * Helper to override the `wants-type` configuration value.
+     */
+    private Config confWants(Config conf, String wants) {
+        // default config - deal with the case when conf==null:
+        Config dconf = conf == null ? ConfigFactory.load() : conf;
+        // Create a new Config object for the single value 'wants-type':
+        Config wconf = ConfigFactory.parseString("ncbi-ids.wants-type=" + wants);
+        // Effective config:
+        Config econf = wconf.withFallback(dconf);
+        log.trace("Effective config: " + econf.root().render());
+        return econf;
+    }
+
+    /**
      * Initialize the iddb with the literature id database, with the
-     * given config, and the given wantedIdType
+     * given config, but overriding wantedIdType
      */
     // default config (src/main/resources/reference.conf).
     public void initLit(Config config, String wanted)
         throws Exception
     {
-        iddb = IdDb.getLiteratureIdDb(config);
-        String _wanted = wanted == null ? "pmid" : wanted;
-        IdType wantedType = iddb.getType(_wanted);
-        resolver = iddb.newResolver(wantedType);
+        iddb = IdDb.getLiteratureIdDb(confWants(config, wanted));
+        resolver = iddb.newResolver();
 
         // for convenience:
         pmid = iddb.getType("pmid");
@@ -201,6 +214,7 @@ public class TestIdResolver
                 }
             }
         );
+
     }
 
     /////////////////////////////////////////////////////////////

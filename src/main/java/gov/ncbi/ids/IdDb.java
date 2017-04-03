@@ -172,19 +172,23 @@ public class IdDb
     }
 
     /////////////////////////////////////////////////////////////////////
-    // Create a new IdResolver
+    // Create a new IdResolver. The goal here is that the IdResolver
+    // constructor should not reach back up into this IdDb object to
+    // get config.
 
-    public IdResolver newResolver(IdType wantedType, Config config)
+    public IdResolver newResolver(Config config)
             throws MalformedURLException
     {
-        return new IdResolver(this, wantedType, this.config.withFallback(config));
+        return new IdResolver(this, this.config.withFallback(config));
     }
 
-    public IdResolver newResolver(IdType wantedType)
+    public IdResolver newResolver()
         throws MalformedURLException
     {
-        return new IdResolver(this, wantedType, this.config);
+        return new IdResolver(this, this.config);
     }
+
+
 
     /////////////////////////////////////////////////////////////////////
     // Methods to process user-supplied ID strings
