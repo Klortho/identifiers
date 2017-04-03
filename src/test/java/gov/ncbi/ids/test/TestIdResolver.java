@@ -383,7 +383,7 @@ public class TestIdResolver
 
         ObjectNode recordA = (ObjectNode) records.get(0);
         NonVersionedIdSet parentA =
-            (NonVersionedIdSet) resolver.readIdSet(recordA);
+            resolver.readIdSet(recordA);
         log.debug("From two-good-pmids.json, parentA: " +
             parentA.dump());
         assertFalse(parentA.isVersioned());
@@ -398,8 +398,8 @@ public class TestIdResolver
         assertEquals(pmcid.id("PMC3539452.1"), kidA0.getId(pmcid));
 
         NonVersionedIdSet parentB =
-            (NonVersionedIdSet) resolver.readIdSet(
-                (ObjectNode) records.get(1));
+            resolver.readIdSet(
+            records.get(1));
         assertEquals("26829486", parentB.getId(pmid).getValue());
         List<VersionedIdSet> kidsB = parentB.getVersions();
         assertEquals(kidsB.get(0), parentB.getCurrent());
@@ -419,8 +419,8 @@ public class TestIdResolver
         assertEquals(1, records.size());
 
         NonVersionedIdSet parent =
-            (NonVersionedIdSet) resolver.readIdSet(
-                (ObjectNode) records.get(0));
+            resolver.readIdSet(
+            records.get(0));
         List<VersionedIdSet> kids = parent.getVersions();
         assertEquals(3, kids.size());
 
@@ -479,7 +479,6 @@ public class TestIdResolver
     }
 
 
-    @Ignore
     @Test
     public void testIdResolver()
         throws Exception
@@ -487,17 +486,16 @@ public class TestIdResolver
         IdResolver resolver = new IdResolver(litIds, pmcid, mockMapper);
         assertEquals(pmcid, resolver.getWantedType());
 
-    /*
         List<RequestId> ridList = resolver.resolveIds("26829486,22368089");
         assertEquals(2, ridList.size());
 
         RequestId rid0 = ridList.get(0);
-        assert(rid0.same(pmid.id("26829485")));
-        assert(rid0.same(pmcid.id("PMC4734780")));
-        assert(rid0.same("pmcid:PMC4734780"));
-        assert(rid0.same("PMC4734780"));
-        assert(rid0.same("pmcid:4734780"));
-        assert(rid0.same("pmcid:4734780"));
+        assertEquals("PMC4734780", rid0.getId(pmcid).getValue());
+        RequestId rid1 = ridList.get(1);
+        assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
+
+
+        /*
 
         ridList =  resolver.resolveIds("26829486,7777");
 
