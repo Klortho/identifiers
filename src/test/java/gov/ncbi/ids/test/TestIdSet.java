@@ -113,10 +113,6 @@ public class TestIdSet
         List<Identifier> expected = iddb.idList(expect);
         List<Identifier> actual = uut.collect(Collectors.toList());
 
-        log.debug("chkIdStream:");
-        log.debug("  expected: " + expected);
-        log.debug("  actual: " + actual);
-
         assertEquals(msg, expected, actual);
     }
 
@@ -180,7 +176,7 @@ public class TestIdSet
     public void testConstructorNoVer()
     {
         NonVersionedIdSet uut = new NonVersionedIdSet(litIds);
-        log.debug(uut.dump());
+        //log.trace(uut.dump());
 
         assertFalse(uut.isVersioned());
         assertEquals(0, uut.getVersions().size());
@@ -192,7 +188,6 @@ public class TestIdSet
         List<Identifier> expList = Arrays.asList(pmidId, pmcidId, doiId);
 
         uut.add(pmidId, pmcidId, doiId);
-        log.debug(uut.dump());
         assertTrue(uut.hasType(pmid));
         assertTrue(uut.hasType(pmcid));
         assertTrue(uut.hasType(doi));
@@ -274,18 +269,22 @@ public class TestIdSet
     @Test
     public void testToString()
     {
-        log.debug("parent: " + parent.toString());
-        log.debug("kid0: " + kid0.toString());
-        log.debug("kid1: " + kid1.toString());
-        log.debug("kid2: " + kid2.toString());
-
+        // check toString()
         assertThat(parent.toString(), stringContainsInOrder(Arrays.asList(
-            "pmid:123456", "pmcid:PMC654321", "10.13/23434.56")));
+                "pmid:123456", "pmcid:PMC654321", "10.13/23434.56")));
+        assertThat(kid0.toString(), stringContainsInOrder(Arrays.asList(
+                "pmid:123456.1", "pmcid:PMC654321.2")));
+        assertThat(kid1.toString(), stringContainsInOrder(Arrays.asList(
+                "pmid:123456.3", "mid:NIHMS77876")));
+        assertThat(kid2.toString(), stringContainsInOrder(Arrays.asList(
+                "pmcid:PMC654321.8", "aiid:654343")));
 
-        log.debug("parent: " + parent.dump());
-        log.debug("kid0: " + kid0.dump());
-        log.debug("kid1: " + kid1.dump());
-        log.debug("kid2: " + kid2.dump());
+        // check dump()
+        assertThat(parent.dump(), stringContainsInOrder(Arrays.asList(
+                "pmid:123456", "versions:", "pmid:123456.1", "pmid:123456.3")));
+        assertEquals(kid0.toString(), kid0.dump());
+        assertEquals(kid1.toString(), kid1.dump());
+        assertEquals(kid2.toString(), kid2.dump());
     }
 
     /**
@@ -295,11 +294,13 @@ public class TestIdSet
     @Test
     public void testParentsAndKids()
     {
-        log.debug("parent.dump: " + parent.dump());
-        log.debug("NonVersionedIdSet parent: " + parent.toString());
-        log.debug("IdVersionSet kid0: " + kid0.toString());
-        log.debug("IdVersionSet kid1: " + kid1.toString());
-        log.debug("IdVersionSet kid2: " + kid2.toString());
+      /*
+        log.trace("parent.dump: " + parent.dump());
+        log.trace("NonVersionedIdSet parent: " + parent.toString());
+        log.trace("IdVersionSet kid0: " + kid0.toString());
+        log.trace("IdVersionSet kid1: " + kid1.toString());
+        log.trace("IdVersionSet kid2: " + kid2.toString());
+      */
 
         assertFalse(parent.isVersioned());
         assertTrue(kid0.isVersioned());
@@ -353,9 +354,7 @@ public class TestIdSet
         Identifier pmcidId = pmcid.id("654321");
         Identifier doiId = doi.id("10.12/23/45");
 
-        //log.debug("Before: parent = " + parent);
         p.add(pmidId, pmcidId, doiId);
-        //log.debug("After: parent = " + parent);
 
         // identity, instance, and work are all the same - there is
         // only one
@@ -584,10 +583,10 @@ public class TestIdSet
         Id idB = record.idB;
         IdScope sameness = record.sameness;
 
-        log.debug("Checking sameness of " + nameA + " and " + nameB);
-        log.debug("  " + nameA + ": " + idA);
-        log.debug("  " + nameB + ": " + idB);
-        log.debug("  sameness should be: " + sameness);
+        log.trace("Checking sameness of " + nameA + " and " + nameB);
+        log.trace("  " + nameA + ": " + idA);
+        log.trace("  " + nameB + ": " + idB);
+        log.trace("  sameness should be: " + sameness);
 
         String msg = "  " + nameA + " <==> " + nameB + ": ";
         checkEqualsMethod(msgAppend(msg, "equality tests: "), idA, idB);

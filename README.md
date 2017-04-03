@@ -8,55 +8,70 @@ TestIdResolver.
 ## Data model
 
 An IdSet holds a list of Identifiers that all refer to the
-same semantically-defined resource. For example, a PMC article might
-have three separate primary IDs such as the following.
+same resource. There are two types of resources, corresponding to two types of
+Identifiers:
+
+- Non-versioned identifiers (e.g. "PMC123456") refer to the abstract concept
+  of some entity, independent of any revisions that it might undergo. This is
+  analogous to a "work", as defined by the FRBR standard
+  (http://www.oclc.org/research/activities/frbr.html), and this library uses
+  that term.
+- Versioned identifiers (e.g. "PMC123456.1") refer to a specific version of
+  the entity as it existed at some point in time. This is analogous to the FRBR
+  concept of "expression".
+
+Note that at any given time, for a give work, there will be a "current" version.
+So, for example, the journal article PMC123456 might have three versions, with
+the current version being PMC132456.3. If so, then both
+https://ncbi.nlm.nih.gov/pmc/articles/PMC123456 and
+https://ncbi.nlm.nih.gov/pmc/articles/PMC123456.3 would resolve to the same
+version of this article, but these identifier would not be considered equivalent,
+since they still refer to different conceptual resources. The former refers
+to "the *current* version", and the latter refers to "version 3".
+
+A more complete example is the following PMC article, which has
+three separate identifiers that refer to the *work*:
 
 - PubMed ID (pmid): 17401604
 - PMC ID (pmcid): PMC1868567
 - DOI (doi): 10.1007/s10162-007-0081-z
 
-None of these three IDs refer to a specific version of the article.
-Rather, they refer to the concept of this particular article
-as a scientific work, without regard version.
+There also exist sets of IDs that refer to specific versions (note that each
+version can have multiple IDs). They are:
 
-However, there also exist IDs that do refer to specific versions. For
-example, the final submitted manuscript of the above article is specified
-by the following version-specific IDs:
+- Version 1: PMC1868567.1, mid:NIHMS20955, aiid:1868567
+- Version 2: PMC1868567.2, aiid:1950588
+- Version 3 (current): PMC1868567.3, aiid:2538359
 
-- pmcid: PMC1868567.1
-- Manuscript ID (mid): NIHMS20955
-
-Note that PMC IDs have both non-version-specific (without a ".n" suffix)
-and version specific (with suffix) forms. Other ID types do not have this
-characteristic. For example, DOIs are always (ostensibly)
-non-version-specific, whereas Manuscript IDs are
+Note that some types of identifiers (for example, pmcid's) have both
+non-versioned (e.g. PMC1868567) and versioned (e.g. PMC1868567.2) forms.
+Other types of identifiers do not have this characteristic. DOIs are always
+(ostensibly) non-version-specific, whereas Manuscript IDs are
 always version-specific.
 
-The example article above has two other versions, that are referred to by
-the following:
+As of the time of this writing, in the above example, the third version is
+"current". So, both PMC1868567 and PMC1868567.3 will dereference to the same
+digital object. Yet, they can't be considered equal, because
+they refer to different semantic resources.
 
-- second version: pmcid: PMC1868567.2
-- third version: PMC1868567.3
+This library includes methods to determine when two identifiers are "the same",
+in a number of different scopes. For completeness, they are listed here
+combined with the Java equality concepts.
 
-As of the time of this writing, the third version is "current". So, at
-this time, the non-version-specific ID PMC1868567 refers to the same
-"expression" (in the FRBR sense) as the version-specific PMC1868567.1.
-They can't be considered equal because semantically,
-they refer to different resources (one refers to the "work", whereas the
-other refers to the "expression").
+- `===` - identical; the two Java variables refer to the same object in memory
+- `.equals()` - the two Java objects are completely interchangeable
+- `.same()` - the two Ids refer to the same resource: either both are
+    non-versioned identifiers, or both are versioned. For example:
+    `PMC1868567.1`.same(`mid:NIHMS20955`) would be *true*.
+- `.sameExpression()` - at the time this is invoked, the two Ids dereference
+    to the same digital object.
+- `.sameWork()` - the two Ids are both valid identifiers in the complete set
+    of identifiers for a given *work*.
 
-This library includes methods to determine when two IDs are the same
-in one of these scopes. So, for example, the following methods, if called on
-the Identifier object for PMC1868567, would return `true`:
-
-- sameResource(pmid:17401604)
-- sameExpression(PMC1868567.3)
-- sameWork(NIHMS20955)
-
-There are two subclasses of IdSet, NonVersionedIdSet and VersionedIdSet,
+There are two subclasses of `IdSet`: `NonVersionedIdSet` and `VersionedIdSet`,
 that store these different types of IDs, and a parent-child relationship
-between them. A given IdNonVersionedSet can have zero-to-many
-IdVersionedSet children.
+between them. A given `IdNonVersionedSet` can have zero-to-many
+`IdVersionedSet` children.
 
 
 ## Testing
@@ -81,9 +96,9 @@ mvn -Dtest=TestIdSet#testConstructorVer test
 ```
 
 To run a test without compiling all of the other, unaffected classes and members
-of the repository, specify the lifecycle phase explicitely as `surefire:test`.
+of the repository, specify the lifecycle phase explicitly as `surefire:test`.
 (This is useful if you want to run a unit test on a class you're working on,
-but there are other compile-time errors in other files.)
+but there are compile-time errors in other files.)
 
 ```
 mvn -Dtest=TestIdSet surefire:test
@@ -96,37 +111,30 @@ mvn '-Dtest=Test*' test
 mvn -Dtest='*Transform*' test
 ```
 
-See documentation on the [Maven Surefire
-plugin](http://maven.apache.org/surefire/maven-surefire-plugin/)
+See the documentation of the [Maven Surefire
+plugin](http://maven.apache.org/surefire/maven-surefire-plugin/),
 for more options.
+
+
+### Log configuration during testing
+
+When testing, the log is configured with src/test/resources/log4j.properties.
+
+
 
 
 ## Configuration
 
-### System properties
-
-***FIXME:*** are these still relevant?
-
-* On the command line. For example:
-
-    ```
-    mvn jetty:run -Djetty.port=9876 -Did_cache=true -Did_cache_ttl=8
-    ```
-
-### typesafehub Config
-
-***FIXME:*** Need to document.
-
 This library uses the [typesafehub
-Config](https://typesafehub.github.io/config/) library for configuration
-information.
-
-## Maven from the command line
-
-***FIXME:*** Include some examples
+Config](https://typesafehub.github.io/config/) library for configuration,
+which affords several ways of specifying configuration information.
 
 
-### Javadocs
+
+
+
+
+## Javadocs
 
 The following commands generate javadocs:
 

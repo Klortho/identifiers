@@ -49,11 +49,11 @@ public class TestIdParser
         assertEquals("ab11", idm.reMatcher.group(0));
         assertEquals("11", idm.reMatcher.group(1));
 
-        log.debug("idp0: " + idp0.toString());
+        //log.debug("idp0: " + idp0.toString());
         //assertEquals("/[aA][bB](\\d\\d)/ versioned", idp.toString());
 
         IdParser idp1 = new IdParser(regexp, false, UPPERCASE);
-        log.debug("idp1: " + idp1.toString());
+        //log.debug("idp1: " + idp1.toString());
         //assertEquals("/[aA][bB](\\d\\d)/ non-versioned", idp1.toString());
     }
 

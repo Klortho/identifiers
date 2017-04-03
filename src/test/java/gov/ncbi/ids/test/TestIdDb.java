@@ -103,9 +103,6 @@ public class TestIdDb
     @Test
     public void testTypesNames()
     {
-        log.debug("Testing IdDb " + iddb.getName());
-        log.debug("    iddb: " + iddb);
-
         assertNotNull(iddb);
         assertEquals(5, iddb.getTypes().size());
 

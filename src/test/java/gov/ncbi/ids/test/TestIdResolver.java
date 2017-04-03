@@ -1,10 +1,12 @@
 package gov.ncbi.ids.test;
 
 import static com.fasterxml.jackson.core.JsonParser.Feature.*;
+import static gov.ncbi.ids.RequestId.State.GOOD;
+import static gov.ncbi.ids.RequestId.State.INVALID;
 import static gov.ncbi.ids.RequestId.State.NOT_WELL_FORMED;
 import static gov.ncbi.ids.RequestId.State.UNKNOWN;
 import static gov.ncbi.testing.TestHelper.assertThrows;
-
+import static gov.ncbi.ids.test.TestRequestId.checkState;
 import static gov.ncbi.ids.IdDbJsonReader.jsonFeatures;
 
 import static org.junit.Assert.*;
@@ -220,8 +222,6 @@ public class TestIdResolver
         assertEquals(2, records.size());
         ObjectNode record0 = (ObjectNode) records.get(0);
         ObjectNode record1 = (ObjectNode) records.get(1);
-        log.debug("record0: " + record0);
-        log.debug("record1: " + record1);
 
         TextNode pmcIdent = (TextNode) record0.get("pmcid");
         assertEquals("PMC3539452", pmcIdent.asText());
@@ -246,7 +246,7 @@ public class TestIdResolver
         assertEquals(UNKNOWN, rid0.getState());
         assertTrue(rid0.isWellFormed());
         assertFalse(rid0.isResolved());
-        assertEquals(MaybeBoolean.MAYBE, rid0.isGood());
+        assertEquals(false, rid0.isGood());
         assertEquals("pMid", rid0.getRequestedType());
         assertEquals("12345", rid0.getRequestedValue());
         assertEquals(pmid.id("12345"), rid0.getMainId());
@@ -263,7 +263,6 @@ public class TestIdResolver
         rids = resolver.parseRequestIds("pmcid", "PMC6788,845763,NIHMS99878,PMC778.4");
         assertEquals(4, rids.size());
         assertEquals(pmcid.id("PMC6788"), rids.get(0).getMainId());
-        log.debug("should be non-well-formed: " + rids.get(1));
         assertEquals(pmcid.id("PMC845763"), rids.get(1).getMainId());
         assertEquals(NOT_WELL_FORMED, rids.get(2).getState());
         assertEquals(pmcid.id("PMC778.4"), rids.get(3).getMainId());
@@ -315,7 +314,6 @@ public class TestIdResolver
         );
 
         Map<IdType, List<RequestId>> groups = resolver.groupsToResolve(rids);
-        System.out.println(groups);
         assertEquals(3, groups.entrySet().size());
         checkGroup(pmcid, groups,
             "pmcid:PMC77898", "pmcid:PMC34567", "pmcid:PMC77898.1");
@@ -343,9 +341,9 @@ public class TestIdResolver
             new RequestId(litIds, "pmid", "34567"),
             new RequestId(litIds, "pmid", "77898")
         );
-        log.debug("rids: " + rids);
+        log.trace("rids: " + rids);
         requestURL = resolver.resolverUrl(fromType, rids);
-        log.debug("resolver URL: " + requestURL);
+        log.trace("resolver URL: " + requestURL);
         assertTrue(requestURL.toString().endsWith(
             "idtype=pmid&ids=34567,77898"));
 
@@ -387,8 +385,6 @@ public class TestIdResolver
         ObjectNode recordA = (ObjectNode) records.get(0);
         NonVersionedIdSet parentA =
             resolver.readIdSet(recordA);
-        log.debug("From two-good-pmids.json, parentA: " +
-            parentA.dump());
         assertFalse(parentA.isVersioned());
         assertEquals("PMC3539452", parentA.getId(pmcid).getValue());
 
@@ -481,7 +477,6 @@ public class TestIdResolver
         });
     }
 
-
     @Test
     public void testIdResolver_0()
         throws Exception
@@ -498,7 +493,6 @@ public class TestIdResolver
         assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
     }
 
-
     @Test
     public void testIdResolver_1()
         throws Exception
@@ -510,62 +504,9 @@ public class TestIdResolver
             resolver.resolveIds("fleegle,22368089,1,26829486");
         assertEquals(4, ridList.size());
 
-        RequestId rid0 = ridList.get(0);
-        assertFalse(rid0.isWellFormed());
-
-        RequestId rid1 = ridList.get(1);
-        assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
-
-        RequestId rid2 = ridList.get(2);
-        assertTrue(rid2.isWellFormed());
-        assertTrue(rid2.isResolved());
-        assertEquals(MaybeBoolean.FALSE, rid2.isGood());
-
+        checkState("For `fleegle`", NOT_WELL_FORMED, ridList.get(0));
+        checkState("For `22368089`", GOOD, ridList.get(1));
+        checkState("For `1`", INVALID, ridList.get(2));
+        checkState("For `22368089,1,26829486`", GOOD, ridList.get(3));
     }
-
-
-
-        /*
-
-        ridList =  resolver.resolveIds("26829486,7777");
-
-        RequestId rid0, rid1;
-        IdGlob idg0, idg1;
-        IdResolver resolver;
-
-        resolver = new IdResolver();
-        RequestIdList idList = null;
-        try {
-            idList = resolver.resolveIds("PMC3362639,Pmc3159421");
-        }
-        catch(Exception e) {
-            fail("Got an Exception: " + e.getMessage());
-        }
-        assertEquals(2, idList.size());
-
-        // Check the first ID
-        rid0 = idList.get(0);
-        assertEquals("pmcid", rid0.getType());
-        assertEquals("PMC3362639", rid0.getRequestedValue());
-        assertEquals("pmcid:PMC3362639", rid0.getId().toString());
-
-        idg0 = rid0.getIdGlob();
-        assertNotNull(idg0);
-        assertFalse(idg0.isVersioned());
-        assertEquals("aiid:3362639", idg0.getIdByType("aiid").toString());
-        assertEquals("doi:10.1371/journal.pmed.1001226", idg0.getIdByType("doi").toString());
-        assertNull(idg0.getIdByType("pmid"));
-
-        // Check the second ID
-        rid1 = idList.get(1);
-        assertEquals("pmcid", rid1.getType());
-        assertEquals("Pmc3159421", rid1.getRequestedValue());
-        assertEquals("pmcid:PMC3159421", rid1.getId().toString());
-        idg1 = rid1.getIdGlob();
-        assertNotNull(idg1);
-        assertFalse(idg1.isVersioned());
-        assertEquals("aiid:3159421", idg1.getIdByType("aiid").toString());
-        assertEquals("doi:10.4242/BalisageVol7.Maloney01", idg1.getIdByType("doi").toString());
-        assertEquals("pmid:21866248", idg1.getIdByType("pmid").toString());
-      */
 }

@@ -119,12 +119,10 @@ public class RequestId extends Id
         this.requestedValue = reqValue;
 
         IdParts idp = new IdParts(iddb, reqType, reqValue);
-        log.trace("parts: " + idp);
         this.mainId = iddb.makeId(idp);
 
         // If not-well-formed, set the "_resolved" flag to true
         this.resolved = (mainId == null);
-        log.trace("New RequestId: " + this);
     }
 
 
@@ -172,6 +170,8 @@ public class RequestId extends Id
     }
 
     /**
+     * FIXME: I changed this from returning a 3-state variable to a plain bool.
+     *   Need to update these docs.
      * Whether or not the requested ID successfully parsed and is known to
      * point to a real resource.
      * @return  One of three values: MaybeBoolean.TRUE, MaybeBoolean.FALSE, or
@@ -180,13 +180,13 @@ public class RequestId extends Id
      *   been resolved yet. In that case, it's not possible to say whether or
      *   not it points to a real resource.
      */
-    public MaybeBoolean isGood() {
+    public boolean isGood() {
         State state = getState();
         return
-            state == NOT_WELL_FORMED ? MaybeBoolean.FALSE :
-            state == UNKNOWN         ? MaybeBoolean.MAYBE :
-            state == INVALID         ? MaybeBoolean.FALSE :
-                                       MaybeBoolean.TRUE;
+            state == NOT_WELL_FORMED ? false :
+            state == UNKNOWN         ? false :
+            state == INVALID         ? false :
+                                       true;
     }
 
     /**
@@ -367,7 +367,6 @@ public class RequestId extends Id
         if (other == null) return false;
         if (!(other instanceof RequestId)) return false;
         RequestId orid = (RequestId) other;
-        log.debug("====> testing");
         return objEquals(this.requestedType, orid.requestedType) &&
             objEquals(this.requestedValue, orid.requestedValue) &&
             objEquals(this.mainId, orid.mainId) &&

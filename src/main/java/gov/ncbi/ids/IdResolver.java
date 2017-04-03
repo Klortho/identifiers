@@ -53,12 +53,14 @@ public class IdResolver
 
     /**
      * FIXME: this cache should move to IdDb.
+     * FIXME: need to write unit tests for the cache.
+     *
      * If caching is enabled, the results returned from the external ID
      * resolver service are cached here. The keys of this are all of the
      * known CURIEs for the Identifiers for any given IdSet that gets
      * instantiated.
      */
-    KittyCache<String, IdSet> idGlobCache;
+    KittyCache<String, IdSet> idSetCache;
 
     /// This is used to parse JSON
     private ObjectMapper mapper;
@@ -111,9 +113,9 @@ public class IdResolver
         this.idConverterBase = converterUrl + "?" + converterParams + "&";
         this.mapper = mapper == null ? new ObjectMapper() : mapper;
 
-        log.debug("Instantiating idGlobCache, size = " + cacheSize +
-                ", time-to-live = " + cacheTtl);
-        this.idGlobCache = new KittyCache<>(cacheSize);
+        //log.debug("Instantiating idSetCache, size = " + cacheSize +
+        //        ", time-to-live = " + cacheTtl);
+        this.idSetCache = new KittyCache<>(cacheSize);
     }
 
     // For debugging
@@ -166,7 +168,7 @@ public class IdResolver
 
     /**
      * Resolves a comma-delimited list of IDs into a List of RequestIds.
-     *
+
      * @param reqType - The name of an IdType, or null. This allows the
      *   user to override the default interpretation of an ID value string. For
      *   example, if she specified "pmcid", then the value "12345" would be
@@ -179,18 +181,14 @@ public class IdResolver
     public List<RequestId> resolveIds(String reqType, String reqValues)
             throws IOException
     {
-        log.debug("Resolving IDs '" + reqValues + "'");
-
         // Parse the strings into a list of RequestId objects
         List<RequestId> allRids = parseRequestIds(reqType, reqValues);
-        log.trace("allRids.size: " + allRids.size() + ", allRids: " + allRids);
 
         // Pick out those that need to be resolved, grouped by fromType
         Map<IdType, List<RequestId>> groups = groupsToResolve(allRids);
 
         // For each of those groups
         for (Map.Entry<IdType, List<RequestId>> entry : groups.entrySet()) {
-            log.trace("gonna resolve " + entry.getValue());
             IdType fromType = entry.getKey();
             List<RequestId> gRids = entry.getValue();
 
@@ -202,8 +200,7 @@ public class IdResolver
             ObjectNode response = (ObjectNode) mapper.readTree(url);
 
             String status = response.get("status").asText();
-            log.debug("Status response from id resolver: " + status);
-            log.debug("Parsed data tree: " + response);
+            log.trace("Status response from id resolver: " + status);
 
             if (!status.equals("ok")) {
                 log.info("Error response from ID resolver for URL " + url);
@@ -220,7 +217,6 @@ public class IdResolver
                 for (JsonNode record : records) {
                     try {
                         IdSet set = readIdSet(record);
-                        log.debug("Constructed an id set: " + set);
                         if (set == null) continue;
                         findAndBind(fromType, gRids, set);
                     }
@@ -242,7 +238,6 @@ public class IdResolver
     public List<RequestId> parseRequestIds(String reqType, String reqValues)
     {
         String[] reqValArray = reqValues.split(",");
-        log.trace("reqValArray: " + reqValArray);
         return Arrays.asList(reqValArray).stream()
             .map(v -> new RequestId(iddb, reqType, v))
             .collect(Collectors.toList());
@@ -369,7 +364,7 @@ public class IdResolver
         JsonNode statusNode = field.getValue();
         String status = statusNode.asText();
         if (!status.equals("success")) {
-            log.error("ID resolver didn't find: " + set);
+            log.info("ID resolver didn't find: " + set);
         }
         return true;
     };
@@ -386,10 +381,13 @@ public class IdResolver
 
         String value = field.getValue().asText();
         Identifier id = idType.id(value);
-        if (id == null) badJson("Couldn't parse identifier of type " +
-            idType + ": " + value);
+        if (id == null) {
+            log.info("Couldn't parse identifier " + idType + ":" + value);
+        }
+        else {
+            set.add(id);
+        }
 
-        set.add(id);
         return true;
     };
 

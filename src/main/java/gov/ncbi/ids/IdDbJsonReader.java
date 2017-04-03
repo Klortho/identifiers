@@ -69,7 +69,6 @@ public class IdDbJsonReader
     public IdDb readIdDb(URL jsonUrl)
         throws IOException
     {
-        System.out.println("jsonUrl: " + jsonUrl);
         return readIdDb(mapper.readTree(jsonUrl.openStream()));
     }
 
@@ -79,7 +78,7 @@ public class IdDbJsonReader
     public IdDb readIdDb(JsonNode topNode)
         throws IOException
     {
-        log.debug("Reading an IdDb from JsonNode: " + topNode);
+        //log.debug("Reading an IdDb from JsonNode: " + topNode);
 
         _validateNode("top node", topNode, true, OBJECT);
         ObjectNode top = (ObjectNode) topNode;

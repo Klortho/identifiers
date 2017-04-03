@@ -77,7 +77,7 @@ public class TestRequestId
         case NOT_WELL_FORMED:
             assertFalse(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
-            assertEquals(msg, rid.isGood(), FALSE);
+            assertEquals(msg, rid.isGood(), false);
             assertNull(msg, rid.getMainId());
             assertNull(msg, rid.getMainType());
             assertNull(msg, rid.getMainValue());
@@ -88,21 +88,21 @@ public class TestRequestId
         case UNKNOWN:
             assertTrue(msg, rid.isWellFormed());
             assertFalse(msg, rid.isResolved());
-            assertEquals(msg, rid.isGood(), MAYBE);
+            assertEquals(msg, rid.isGood(), false);
             assertNotNull(msg, rid.getMainId());
             break;
 
         case INVALID:
             assertTrue(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
-            assertEquals(msg, rid.isGood(), FALSE);
+            assertEquals(msg, rid.isGood(), false);
             assertNotNull(msg, rid.getMainId());
             break;
 
         case GOOD:
             assertTrue(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
-            assertEquals(msg, rid.isGood(), TRUE);
+            assertEquals(msg, rid.isGood(), true);
             assertNotNull(msg, rid.getMainId());
             break;
         }
@@ -127,12 +127,10 @@ public class TestRequestId
     public void testUnknown() {
         RequestId rid = new RequestId(litIds, "pMC1234");
         assertEquals(UNKNOWN, rid.getState());
-        log.debug("RequestId: " + rid.toString());
         assertEquals(
             "{ requested: pMC1234, " +
                 "found: pmcid:PMC1234 }",
             rid.toString());
-        log.debug("  dumped: " + rid.dump());
         checkState("testUnknown: ", UNKNOWN, rid);
 
         assertFalse(rid.hasType(pmid));
@@ -200,7 +198,6 @@ public class TestRequestId
     public void testEquals() {
         RequestId ridA = new RequestId(litIds, "PMC1234");
         assertFalse(ridA.isVersioned());
-        log.debug("ridA: " + ridA);
 
         // Not equal to null
         assertFalse(ridA.equals(null));
@@ -212,7 +209,6 @@ public class TestRequestId
         // data
         RequestId ridB = new RequestId(litIds, "PMC1234");
         assertFalse(ridB.isVersioned());
-        log.debug("ridB: " + ridB);
 
         assertEquals(ridA, ridB);
         checkEqualsMethod(ridA, ridB);
@@ -221,9 +217,6 @@ public class TestRequestId
         // the mainId's are equal.
         RequestId ridC = new RequestId(litIds, "pmcid", "PMC1234");
         assertEquals(ridA.getMainId(), ridC.getMainId());
-        log.debug("These two should not be equal: " + ridA + ", " + ridC);
-        log.debug("  ridA: " + ridA.dump());
-        log.debug("  ridC: " + ridC.dump());
         assertNotEquals(ridA, ridC);
         checkEqualsMethod("Different", ridA, ridC);
     }

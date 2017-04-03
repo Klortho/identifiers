@@ -231,7 +231,6 @@ public class TestIdentifier
     @Test
     public void testToString() {
         Identifier x = pmcid.id("123456");
-        log.debug("Checking the toString() value: " + x);
         assertEquals("pmcid:PMC123456", x.toString());
     }
 }
