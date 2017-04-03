@@ -149,5 +149,13 @@ public class IdParts
     public boolean hasProblems() {
         return this.problems.size() > 0;
     }
+
+    @Override
+    public String toString() {
+        return "typeSpec: " + typeSpec + ", " +
+               "prefix: " + prefix + ", " +
+               "type: " + type + ", " +
+               "npValue: " + npValue;
+    }
 }
 

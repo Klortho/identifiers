@@ -183,17 +183,20 @@ public class IdResolver
 
         // Parse the strings into a list of RequestId objects
         List<RequestId> allRids = parseRequestIds(reqType, reqValues);
+        log.trace("allRids.size: " + allRids.size() + ", allRids: " + allRids);
 
         // Pick out those that need to be resolved, grouped by fromType
         Map<IdType, List<RequestId>> groups = groupsToResolve(allRids);
 
         // For each of those groups
         for (Map.Entry<IdType, List<RequestId>> entry : groups.entrySet()) {
+            log.trace("gonna resolve " + entry.getValue());
             IdType fromType = entry.getKey();
             List<RequestId> gRids = entry.getValue();
 
             // Compute the URL to the resolver service
             URL url = resolverUrl(fromType, gRids);
+            log.trace("Invoking resolver service with '" + url + "'");
 
             // Invoke the resolver
             ObjectNode response = (ObjectNode) mapper.readTree(url);
@@ -209,14 +212,14 @@ public class IdResolver
                     log.info("Message: " + msg.asText());
             }
             else {
-                // In parsing the response, we'll create IdSet objects as we go. We
-                // have to then match them back to the correct entry in the
+                // In parsing the response, we'll create IdSet objects as we go.
+                // We have to then match them back to the correct entry in the
                 // original list of RequestIds.
 
                 ArrayNode records = (ArrayNode) response.get("records");
                 for (JsonNode record : records) {
                     try {
-                        IdSet set = readIdSet((ObjectNode) record);
+                        IdSet set = readIdSet(record);
                         log.debug("Constructed an id set: " + set);
                         if (set == null) continue;
                         findAndBind(fromType, gRids, set);
@@ -239,6 +242,7 @@ public class IdResolver
     public List<RequestId> parseRequestIds(String reqType, String reqValues)
     {
         String[] reqValArray = reqValues.split(",");
+        log.trace("reqValArray: " + reqValArray);
         return Arrays.asList(reqValArray).stream()
             .map(v -> new RequestId(iddb, reqType, v))
             .collect(Collectors.toList());
@@ -364,8 +368,9 @@ public class IdResolver
         if (!field.getKey().equals("status")) return false;
         JsonNode statusNode = field.getValue();
         String status = statusNode.asText();
-        if (!status.equals("success"))
-            badJson("ID resolver reports bad status: " + status);
+        if (!status.equals("success")) {
+            log.error("ID resolver didn't find: " + set);
+        }
         return true;
     };
 
@@ -435,8 +440,10 @@ public class IdResolver
             dispatchJsonFields(self, record);
 
             ArrayNode versionsNode = (ArrayNode) record.get("versions");
-            for (JsonNode kidRecord : versionsNode) {
-                readVersion((ObjectNode) kidRecord, self);
+            if (versionsNode != null) {
+                for (JsonNode kidRecord : versionsNode) {
+                    readVersion((ObjectNode) kidRecord, self);
+                }
             }
             return self;
         }
@@ -460,7 +467,10 @@ public class IdResolver
         Identifier globId = set.getId(fromType);
         for (RequestId rid : rids) {
             if (globId.equals(rid.getMainId())) {
-                rid.resolve(set);
+                if (set.hasType(wantedType))
+                    rid.resolve(set);
+                else
+                    rid.resolve(null);
                 return rid;
             }
         }

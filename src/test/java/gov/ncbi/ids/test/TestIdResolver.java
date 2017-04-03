@@ -123,6 +123,9 @@ public class TestIdResolver
         new String[] {
             "idtype=pmid&ids=26829486,7777", "one-good-one-bad-pmid"
         },
+        new String[] {
+            "idtype=pmid&ids=22368089,1,26829486", "set0"
+        }
     };
 
     /**
@@ -480,7 +483,7 @@ public class TestIdResolver
 
 
     @Test
-    public void testIdResolver()
+    public void testIdResolver_0()
         throws Exception
     {
         IdResolver resolver = new IdResolver(litIds, pmcid, mockMapper);
@@ -493,6 +496,33 @@ public class TestIdResolver
         assertEquals("PMC4734780", rid0.getId(pmcid).getValue());
         RequestId rid1 = ridList.get(1);
         assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
+    }
+
+
+    @Test
+    public void testIdResolver_1()
+        throws Exception
+    {
+        IdResolver resolver = new IdResolver(litIds, pmcid, mockMapper);
+        assertEquals(pmcid, resolver.getWantedType());
+
+        List<RequestId> ridList =
+            resolver.resolveIds("fleegle,22368089,1,26829486");
+        assertEquals(4, ridList.size());
+
+        RequestId rid0 = ridList.get(0);
+        assertFalse(rid0.isWellFormed());
+
+        RequestId rid1 = ridList.get(1);
+        assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
+
+        RequestId rid2 = ridList.get(2);
+        assertTrue(rid2.isWellFormed());
+        assertTrue(rid2.isResolved());
+        assertEquals(MaybeBoolean.FALSE, rid2.isGood());
+
+    }
+
 
 
         /*
@@ -538,5 +568,4 @@ public class TestIdResolver
         assertEquals("doi:10.4242/BalisageVol7.Maloney01", idg1.getIdByType("doi").toString());
         assertEquals("pmid:21866248", idg1.getIdByType("pmid").toString());
       */
-    }
 }

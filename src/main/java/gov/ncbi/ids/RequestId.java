@@ -121,10 +121,10 @@ public class RequestId extends Id
         IdParts idp = new IdParts(iddb, reqType, reqValue);
         log.trace("parts: " + idp);
         this.mainId = iddb.makeId(idp);
-        log.trace("mainId: " + mainId);
 
         // If not-well-formed, set the "_resolved" flag to true
         this.resolved = (mainId == null);
+        log.trace("New RequestId: " + this);
     }
 
 
@@ -174,11 +174,11 @@ public class RequestId extends Id
     /**
      * Whether or not the requested ID successfully parsed and is known to
      * point to a real resource.
-     * @return  One of three values: MaybeBoolean.TRUE, MaybeBoolean.FALSE, or MaybeBoolean.MAYBE. The
-     *   return value will be MaybeBoolean.MAYBE if the value string was successfully
-     *   parsed into an Identifier, but it hasn't been resolved yet. In that
-     *   case, it's not possible to say whether or not it points to a real
-     *   resource.
+     * @return  One of three values: MaybeBoolean.TRUE, MaybeBoolean.FALSE, or
+     *   MaybeBoolean.MAYBE. The return value will be MaybeBoolean.MAYBE if the
+     *   value string was successfully parsed into an Identifier, but it hasn't
+     *   been resolved yet. In that case, it's not possible to say whether or
+     *   not it points to a real resource.
      */
     public MaybeBoolean isGood() {
         State state = getState();
@@ -305,7 +305,8 @@ public class RequestId extends Id
      * Resolve this, either into the INVALID state (if set == null) or into the
      * GOOD state.
      * @param set  an IdSet, or null. If not null, this must match the main
-     *   Identifier of this RequestId.
+     *   Identifier of this RequestId. If null, then the state after this is
+     *   called will be INVALID.
      */
     public void resolve(IdSet set)
             throws IllegalStateException, IllegalArgumentException
@@ -339,6 +340,7 @@ public class RequestId extends Id
      * false even if they do refer to the same resource -- if this RequestId
      * hasn't yet been resolved.
      */
+    @Override
     public boolean same(IdScope scope, Id oid) {
         if (oid == null || this.mainId == null) return false;
         if (this.mainId.same(scope, oid)) return true;
