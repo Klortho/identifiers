@@ -19,16 +19,6 @@
   </properties>
 
   <repositories>
-  <!--
-    <repository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>ncbi-production</id>
-      <name>ncbi-production</name>
-      <url>https://artifactory.ncbi.nlm.nih.gov/artifactory/ncbi-production</url>
-    </repository>
-  -->
     <repository>
       <id>oss-snapshots-repo</id>
       <name>Sonatype OSS Maven Repository</name>
@@ -50,11 +40,6 @@
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-xml</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
 
   <!--
     Kitty-cache is a java library that has a pom.xml file, but is not uploaded
@@ -71,11 +56,13 @@
       <artifactId>kitty-cache</artifactId>
       <version>065b8d34e2b16c991c4d9db7cdbd16ec1038f325</version>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.7.13</version>
     </dependency>
+
     <dependency>
       <groupId>com.typesafe</groupId>
       <artifactId>config</artifactId>
@@ -89,28 +76,26 @@
     </dependency>
 
     <!-- test-only dependencies -->
+
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>2.4</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- hamcrest-junit 2.0.0.0. depends on junit 4.12 -->
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-junit</artifactId>
       <version>2.0.0.0</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <version>2.7.13</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
-        </exclusion>
-      </exclusions>
       <scope>test</scope>
     </dependency>
   </dependencies>

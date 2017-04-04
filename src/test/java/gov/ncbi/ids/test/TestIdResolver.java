@@ -1,9 +1,9 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.IdDbJsonReader.jsonFeatures;
+import static gov.ncbi.ids.IdDbJsonReader.getJsonFeatures;
 import static gov.ncbi.ids.RequestId.State.*;
 import static gov.ncbi.ids.test.TestRequestId.checkState;
-import static gov.ncbi.testing.TestHelper.assertThrows;
+import static gov.ncbi.test.TestHelper.assertThrows;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -69,7 +69,7 @@ public class TestIdResolver
 
     // Real ObjectMapper for reading JSON from local filesystem
     static final ObjectMapper realMapper = new ObjectMapper()
-            .enable(jsonFeatures);
+            .enable(getJsonFeatures());
 
     /////////////////////////////////////////////////////////////
     // Set up the mocked ObjectMapper

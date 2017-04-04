@@ -2,7 +2,7 @@ package gov.ncbi.ids.test;
 
 import static gov.ncbi.ids.Id.IdScope.*;
 import static gov.ncbi.ids.IdSet.toList;
-import static gov.ncbi.testing.TestHelper.*;
+import static gov.ncbi.test.TestHelper.*;
 import static org.hamcrest.text.StringContainsInOrder.stringContainsInOrder;
 import static org.junit.Assert.*;
 

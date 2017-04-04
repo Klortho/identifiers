@@ -3,7 +3,7 @@ package gov.ncbi.ids.test;
 import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.ids.Id.IdScope.RESOURCE;
 import static gov.ncbi.ids.Id.IdScope.WORK;
-import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
+import static gov.ncbi.test.TestHelper.checkEqualsMethod;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;

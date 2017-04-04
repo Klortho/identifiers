@@ -4,7 +4,7 @@ import static gov.ncbi.ids.IdParser.NOOP;
 import static gov.ncbi.ids.IdParser.UPPERCASE;
 import static gov.ncbi.ids.IdParser.replacer;
 import static gov.ncbi.ids.IdType.nameValid;
-import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
+import static gov.ncbi.test.TestHelper.checkEqualsMethod;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;

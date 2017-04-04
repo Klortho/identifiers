@@ -29,7 +29,7 @@ public class IdDbJsonReader
     @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(IdDbJsonReader.class);
 
-    public static final JsonParser.Feature[] jsonFeatures = {
+    protected static final JsonParser.Feature[] jsonFeatures = {
         ALLOW_COMMENTS,
         ALLOW_NON_NUMERIC_NUMBERS,
         ALLOW_UNQUOTED_FIELD_NAMES,
@@ -37,6 +37,11 @@ public class IdDbJsonReader
         ALLOW_SINGLE_QUOTES,
         STRICT_DUPLICATE_DETECTION
     };
+
+    // Returns a copy of the features array
+    public static JsonParser.Feature[] getJsonFeatures() {
+        return jsonFeatures.clone();
+    }
 
     /**
      * Jackson ObjectMapper. Note that ALLOW_TRAILING_COMMA won't

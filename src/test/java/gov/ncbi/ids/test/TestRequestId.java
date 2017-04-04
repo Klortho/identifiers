@@ -2,7 +2,7 @@ package gov.ncbi.ids.test;
 
 import static gov.ncbi.ids.Id.IdScope.*;
 import static gov.ncbi.ids.RequestId.State.*;
-import static gov.ncbi.testing.TestHelper.checkEqualsMethod;
+import static gov.ncbi.test.TestHelper.checkEqualsMethod;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;

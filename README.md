@@ -74,9 +74,43 @@ between them. A given `IdNonVersionedSet` can have zero-to-many
 `IdVersionedSet` children.
 
 
+## Building
+
+Here are some useful `mvn` commands:
+
+To clean the results of previous builds (the "target" directory):
+
+```
+mvn clean
+```
+
+To download dependencies, compile, test, package, and verify:
+
+```
+mvn verify
+```
+
+To generate reports of the build, javadocs, and other documentation:
+
+```
+mvn site
+```
+
+That generates a static web site in target/site. You could view it by opening,
+as a file in your browser, target/site/index.html. Or you could use the following
+command to generate the reports and start a local static server (using jetty)
+to facilitate viewing them:
+
+```
+mvn site:run
+```
+
+Go to http://localhost:8080/ to see the reports in your browser.
+
+
 ## Testing
 
-To run unit tests from the command line:
+To run all of th eunit tests from the command line:
 
 ```
 mvn test
@@ -118,7 +152,7 @@ for more options.
 
 ### Logging tests
 
-When testing, the log gets its configuration from the properties file
+When testing, the logger gets its configuration from
 src/test/resources/log4j.properties.
 
 When this is used as a library, the application is responsible for configuring
@@ -133,8 +167,8 @@ which affords several ways of specifying configuration metadata.
 
 The library defaults are set in src/main/resources/reference.conf.
 
-Typically, an application will set configuration values for this library
-in its own application.conf file, and then initialize with:
+Typically, an application will override configuration values for this library
+in its own application.conf file, and then initialize it with:
 
 ```java
 import com.typesafe.config.Config;
@@ -145,42 +179,18 @@ public class MyApp {
     public MyApp() {
         config = ConfigFactory.load();
         IdDb iddb = new IdDb(config);
+        ...
+    }
+}
 ```
 
-
-
-You can also set a new value on the command line, by setting the system
-property. For example:
+When using the above pattern, System properties will override the application's
+settings. So, for example, you could override a setting from the the command
+line with:
 
 ```
 mvn -Dcache-enabled=true test
 ```
-
-
-
-
-## Javadocs
-
-The following commands generate javadocs:
-
-- `mvn package` - generates the javadocs, but only if all other phases pass;
-  writes them to target/site/apidocs, as well as to the jar file
-  target/identifiers-<ver>-javadoc.jar
-- `mvn javadoc:javadoc` - generates HTML documentation in target/site/apidocs
-- `mvn javadoc:jar` - generates target/identifiers-<ver>-javadoc.jar
-- `mvn javadoc:test-javadoc` - generates docs for the test classes, in
-  target/site/testapidocs
-- `mvn javadoc:test-jar` - generates target/identifiers-<ver>-test-javadoc.jar
-
-For more information, see:
-
-* [Apache Maven Javadoc Plugin](https://maven.apache.org/plugins/maven-javadoc-plugin/)
-
-
-
-### Surefire test reports
-
-The following commands generate pretty Surefire HTML reports giving results
 
 
 ### Findbugs
@@ -195,9 +205,6 @@ mvn findbugs:gui
 
 ## Dependencies
 
-Dependencies are declared in the *pom.xml* file, and are resolved
-automatically by Maven.
-
 Below is a list of some of the stable dependencies, along with links to
 documentation, useful when doing development, and more details, where
 warranted.
@@ -208,13 +215,6 @@ from GitHub repositories. These are libraries that are not on Maven
 Central, and Jitpack.io provides a way to ensure that we are using a
 stable version. This requires adding the following to the \<repositories>
 section of the pom:
-
-```xml
-<repository>
-  <id>jitpack.io</id>
-  <url>https://jitpack.io</url>
-</repository>
-```
 
 
 ### Java
@@ -274,4 +274,3 @@ warranties of performance, merchantability or fitness for any
 particular purpose.
 
 Please cite NCBI in any work or product based on this material.
-
