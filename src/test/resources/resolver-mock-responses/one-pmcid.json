@@ -1,0 +1,20 @@
+{
+ "status": "ok",
+ "responseDate": "2017-04-04 10:17:23",
+ "request": "showaiid=yes;format=json;tool=ctxp;email=pubmedcentral%40ncbi.nlm.nih.gov;idtype=pmcid;ids=PMC3539452",
+ "records": [
+   {
+    "pmcid": "PMC3539452",
+    "pmid": "22368089",
+    "aiid": "3539452",
+    "doi": "10.1093/cercor/bhs015",
+    "versions": [
+      {
+       "pmcid": "PMC3539452.1",
+       "aiid": "3539452",
+       "current": "true"
+      }
+    ]
+   }
+ ]
+}

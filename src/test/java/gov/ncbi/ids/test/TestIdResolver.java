@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -32,6 +33,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
@@ -50,6 +52,7 @@ import gov.ncbi.ids.VersionedIdSet;
 public class TestIdResolver
 {
     private static final ClassLoader loader = TestIdResolver.class.getClassLoader();
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(TestIdResolver.class);
 
     @Rule
@@ -97,6 +100,7 @@ public class TestIdResolver
         else {
             URL url = loader.getResource("resolver-mock-responses/" +
                 name + ".json");
+            log.trace("Fetching JSON from mock location " + url);
             resp = realMapper.readTree(url);
             mockResponseCache.put(name, resp);
         }
@@ -116,6 +120,9 @@ public class TestIdResolver
         },
         new String[] {
             "idtype=pmid&ids=22368089,1,26829486", "set0"
+        },
+        new String[] {
+            "idtype=pmcid&ids=PMC3539452", "one-pmcid"
         }
     };
 
@@ -142,13 +149,18 @@ public class TestIdResolver
     // requirements, and I don't know how to parameterize the
     // @Before.
 
+    @Before
+    public void initialize() {
+        ConfigFactory.invalidateCaches();
+    }
+
     /**
      * Initialize with the literature id database, and default config.
      */
     public void initLit()
         throws Exception
     {
-        initLit(null, null);
+        initLit(null);
     }
 
     /**
@@ -157,32 +169,14 @@ public class TestIdResolver
     public void initLit(String wanted)
         throws Exception
     {
-        initLit(null, wanted);
-    }
+        Config defaults = ConfigFactory.load();
+        Config config = wanted == null ? defaults :
+            defaults.withValue("ncbi-ids.wants-type",
+                ConfigValueFactory.fromAnyRef(wanted));
 
-    /**
-     * Helper to override the `wants-type` configuration value.
-     */
-    private Config confWants(Config conf, String wants) {
-        // default config - deal with the case when conf==null:
-        Config dconf = conf == null ? ConfigFactory.load() : conf;
-        // Create a new Config object for the single value 'wants-type':
-        Config wconf = ConfigFactory.parseString("ncbi-ids.wants-type=" + wants);
-        // Effective config:
-        Config econf = wconf.withFallback(dconf);
-        log.trace("Effective config: " + econf.root().render());
-        return econf;
-    }
+        log.debug("getting literature id database with config: " + config);
+        iddb = IdDb.getLiteratureIdDb(config);
 
-    /**
-     * Initialize the iddb with the literature id database, with the
-     * given config, but overriding wantedIdType
-     */
-    // default config (src/main/resources/reference.conf).
-    public void initLit(Config config, String wanted)
-        throws Exception
-    {
-        iddb = IdDb.getLiteratureIdDb(confWants(config, wanted));
         resolver = iddb.newResolver();
 
         // for convenience:
@@ -325,6 +319,7 @@ public class TestIdResolver
     {
         initLit();
         List<RequestId> rids;
+        log.debug("iddb: " + iddb);
 
         RequestId rrid = new RequestId(iddb, "pmcid", "1234");
         IdSet rset = new NonVersionedIdSet(iddb);
@@ -510,6 +505,10 @@ public class TestIdResolver
         });
     }
 
+    /**
+     * Verify that if we create an IdResolver that "wants" pmcids, and feed
+     * it a list of pmids, that it will call the resolver service on them.
+     */
     @Test
     public void testIdResolver_0()
         throws Exception
@@ -521,11 +520,20 @@ public class TestIdResolver
         assertEquals(2, ridList.size());
 
         RequestId rid0 = ridList.get(0);
+        assertTrue(rid0.hasType(pmid) && rid0.hasType(pmcid));
         assertEquals("PMC4734780", rid0.getId(pmcid).getValue());
+        checkState("rid0", GOOD, rid0);
+
         RequestId rid1 = ridList.get(1);
+        assertTrue(rid0.hasType(pmid) && rid1.hasType(pmcid));
         assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
+        checkState("rid1", GOOD, rid1);
     }
 
+    /**
+     * Verify that we get the same results when the list is peppered with
+     * some bad IDs.
+     */
     @Test
     public void testIdResolver_1()
         throws Exception
@@ -538,9 +546,41 @@ public class TestIdResolver
             resolver.resolveIds("fleegle,22368089,1,26829486");
         assertEquals(4, ridList.size());
 
-        checkState("For `fleegle`", NOT_WELL_FORMED, ridList.get(0));
-        checkState("For `22368089`", GOOD, ridList.get(1));
-        checkState("For `1`", INVALID, ridList.get(2));
-        checkState("For `22368089,1,26829486`", GOOD, ridList.get(3));
+        RequestId rid0 = ridList.get(0);
+        checkState("Non-well-formed identifier `fleegle`", NOT_WELL_FORMED, rid0);
+
+        RequestId rid1 = ridList.get(1);
+        checkState("pmid:22368089", GOOD, rid1);
+
+        RequestId rid2 = ridList.get(2);
+        checkState("Well-formed, but invalid pmid `1`", INVALID, rid2);
+
+        RequestId rid3 = ridList.get(3);
+        checkState("pmid:26829486", GOOD, rid3);
+    }
+
+    /**
+     * Verify that if IDs already have the "wanted" type, then they don't
+     * get sent to the resolver.
+     */
+    @Test
+    public void testWantedIds()
+            throws Exception
+    {
+        initLit();
+        assertEquals(pmid, resolver.getWantedType());
+
+        List<RequestId> ridList = resolver.resolveIds("26829486,PMC3539452");
+        assertEquals(2, ridList.size());
+
+        RequestId rid0 = ridList.get(0);
+        assertTrue(rid0.hasType(pmid));
+        assertEquals("26829486", rid0.getId(pmid).getValue());
+        checkState("rid0", UNKNOWN, rid0);
+
+        RequestId rid1 = ridList.get(1);
+        assertTrue(rid1.hasType(pmid));
+        assertEquals("22368089", rid1.getId(pmid).getValue());
+        checkState("rid1", GOOD, rid1);
     }
 }

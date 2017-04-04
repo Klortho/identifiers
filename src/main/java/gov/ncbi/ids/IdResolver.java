@@ -70,17 +70,22 @@ public class IdResolver
 
     /**
      * Create a new IdResolver object. This should not be called directly.
-     * @param iddb - the IdDb in effect; contains the config.
-     * @param wantedType - requested IDs will be resolved, if needed, to get
-     *   an Identifier of this type
-     * @throws MalformedURLException  If, via the Config setup, the URL to the
-     *   backend service is no good.
+     * @param iddb - the IdDb in effect; contains a Config object that
+     *   determines the default config values to be used.
+     * @param overrides - A Config object that contains values for those
+     *   config variables that are to be overridden. The ones that effect
+     *   the IdResolver are: `wants-type`, `converter-base`, and
+     *   `converter-params`.
+     * @throws MalformedURLException  This will be thrown if the URL to the
+     *   backend service is not valid.
      */
-    protected IdResolver(IdDb iddb, Config _config)
+    public IdResolver(IdDb iddb, Config overrides)
         throws MalformedURLException
     {
         this.iddb = iddb;
-        this.config = _config;
+        Config defaults = iddb.getConfig();
+        this.config = (overrides == null) ? defaults
+            : overrides.withFallback(defaults);
 
         this.wantedType = //wantedType;
                 iddb.getType(this.config.getString("ncbi-ids.wants-type"));
@@ -91,6 +96,12 @@ public class IdResolver
         this.converterParams = this.config.getString("ncbi-ids.converter-params");
 
         this.converterUrl = converterBase + "?" + converterParams + "&";
+    }
+
+    public IdResolver(IdDb iddb)
+        throws MalformedURLException
+    {
+        this(iddb, null);
     }
 
     /**
@@ -181,36 +192,45 @@ public class IdResolver
 
             // Invoke the resolver
             ObjectNode response = (ObjectNode) mapper.readTree(url);
+            if (response == null) {
+                log.info("Got null response from ID resolver for URL " + url);
+                continue;
+            }
 
-            String status = response.get("status").asText();
+            log.trace("Response from ID resolver service: " + response);
+            JsonNode statusNode = response.get("status");
+            if (statusNode == null) {
+                log.info("Response from ID resolver is missing status " +
+                    "field for URL " + url);
+                continue;
+            }
+
+            String status = statusNode.asText();
             log.trace("Status response from id resolver: " + status);
-
             if (!status.equals("ok")) {
                 log.info("Error response from ID resolver for URL " + url);
                 JsonNode msg = response.get("message");
-                if (msg != null)
-                    log.info("Message: " + msg.asText());
+                if (msg != null) log.info("Message: " + msg.asText());
+                continue;
             }
-            else {
-                // In parsing the response, we'll create IdSet objects as we go.
-                // We have to then match them back to the correct entry in the
-                // original list of RequestIds.
 
-                ArrayNode records = (ArrayNode) response.get("records");
-                for (JsonNode record : records) {
-                    try {
-                        IdSet set = readIdSet(record);
-                        if (set == null) continue;
-                        findAndBind(fromType, gRids, set);
-                    }
-                    catch (IOException e) {
-                        log.error(e.getMessage());
-                        continue;
-                    }
+            // In parsing the response, we'll create IdSet objects as we go.
+            // We have to then match them back to the correct entry in the
+            // original list of RequestIds.
+
+            ArrayNode records = (ArrayNode) response.get("records");
+            for (JsonNode record : records) {
+                try {
+                    IdSet set = readIdSet(record);
+                    if (set == null) continue;
+                    findAndBind(fromType, gRids, set);
+                }
+                catch (IOException e) {
+                    log.error(e.getMessage());
+                    continue;
                 }
             }
         }
-
         return allRids;
     }
 

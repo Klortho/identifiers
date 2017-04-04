@@ -67,7 +67,8 @@ public class IdDb
 
     /**
      * Construct with a name and a Config object. If `config` is null,
-     * this will use the default config. Note that you can override
+     * this will use the default config, according to the documentation of
+     * the typesafe config library. Note that you can override
      * individual config values by setting system properties.
      *
      * Implementation note: Because the data structure has circular
@@ -84,15 +85,19 @@ public class IdDb
         }
     }
 
+    /**
+     * Construct with just a name. The default configuration, specified in
+     * reference.conf, will be used.
+     */
     public IdDb(String name) {
         this(name, null);
     }
 
     /**
-     * Add an IdType to this database. The order in which the IdTypes are
-     * added is significant, because it determines the order in which the
-     * regular expression will be matched against the id string value,
-     * and the first match wins.
+     * Add a single IdType to this database. The order in which the IdTypes are
+     * added determines the order that the regular expressions will be
+     * tried against any new ID string that is parsed, if the type is not
+     * specified.
      */
     public IdDb addType(IdType type) {
         this.types.add(type);
@@ -171,21 +176,31 @@ public class IdDb
         return type;
     }
 
-    /////////////////////////////////////////////////////////////////////
-    // Create a new IdResolver. The goal here is that the IdResolver
-    // constructor should not reach back up into this IdDb object to
-    // get config.
-
-    public IdResolver newResolver(Config config)
-            throws MalformedURLException
-    {
-        return new IdResolver(this, this.config.withFallback(config));
-    }
-
+    /**
+     * Create a new IdResolver that will use the default configuration
+     * metadata that is stored in this IdDb.
+     */
     public IdResolver newResolver()
         throws MalformedURLException
     {
-        return new IdResolver(this, this.config);
+        return newResolver(null);
+    }
+
+    /**
+     * Create a new IdResolver, while overriding some configuration
+     * values.
+     * @param config  A Config object with just those parameters that should
+     *   be different from the defaults. This could be created with, for example,
+     *   <pre>Config override = ConfigFactory.parseString("ncbi-ids.wants-type=pmid"));
+     *   IdResolver resolve = iddb.newResolver(override);</pre>
+     * @return
+     * @throws MalformedURLException
+     */
+
+    public IdResolver newResolver(Config overrides)
+            throws MalformedURLException
+    {
+        return new IdResolver(this, overrides);
     }
 
 
@@ -323,8 +338,8 @@ public class IdDb
     }
 
     /**
-     * Get a fresh copy of the literature id database, with some configuration
-     * overrides. If `config == null`, this just uses the default config.
+     * Get a fresh copy of the literature id database, with a configuration
+     * object. If `config == null`, this uses the default config.
      */
     public static IdDb getLiteratureIdDb(Config config) {
         synchronized(_litIdsLock) {

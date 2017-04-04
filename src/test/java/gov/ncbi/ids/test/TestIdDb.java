@@ -2,6 +2,7 @@ package gov.ncbi.ids.test;
 
 import static gov.ncbi.ids.test.TestIdentifier.checkId;
 import static org.junit.Assert.*;
+import static org.hamcrest.core.StringContains.containsString;
 
 import java.io.IOException;
 import java.net.URL;
@@ -18,6 +19,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.typesafe.config.Config;
 
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdType;
@@ -93,6 +96,22 @@ public class TestIdDb
 
     @Rule
     public TestName name = new TestName();
+
+    /**
+     * Check the default config, whose values are set in
+     * src/main/resources/reference.conf.
+     */
+    @Test
+    public void testConfig()
+    {
+        Config c = iddb.getConfig().getConfig("ncbi-ids");
+        assertFalse(c.getBoolean("cache-enabled"));
+        assertEquals(86400, c.getInt("cache-ttl"));
+        assertEquals(50000, c.getInt("cache-size"));
+        assertEquals("pmid", c.getString("wants-type"));
+        assertThat(c.getString("converter-base"), containsString("idconv"));
+        assertThat(c.getString("converter-params"), containsString("showaiid=yes"));
+    }
 
     /**
      * Test getting types, and their names
