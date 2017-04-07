@@ -4,6 +4,8 @@ import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.ids.Id.IdScope.RESOURCE;
 import static gov.ncbi.ids.Id.IdScope.WORK;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

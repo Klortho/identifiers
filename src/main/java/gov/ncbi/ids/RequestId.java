@@ -97,6 +97,12 @@ public class RequestId extends Id
     private IdSet set = null;
 
     /**
+     * This property lets applications attach any arbitrary data object to
+     * each request id, if needed.
+     */
+    private Object appData = null;
+
+    /**
      * Construct from a value string, that might or might not have a prefix.
      */
     public RequestId(IdDb iddb, String value)
@@ -252,6 +258,19 @@ public class RequestId extends Id
         return this.set;
     }
 
+    /**
+     * Set the application-specific data property.
+     */
+    public void setAppData(Object newData) {
+        this.appData = newData;
+    }
+
+    /**
+     * Get the application-specific data property.
+     */
+    public Object getAppData() {
+        return this.appData;
+    }
 
     /**
      * Returns true if this is known to have an Identifier of the given type

@@ -73,41 +73,27 @@ between them. A given `IdNonVersionedSet` can have zero-to-many
 
 ## Building
 
-Here are some useful `mvn` commands:
-
-To clean the results of previous builds (the "target" directory):
-
-```
-mvn clean
-```
-
-To download dependencies, compile, test, package, and verify:
+This library uses the Maven build tool. To create a fresh build of the
+distribution package and the documentation, run:
 
 ```
-mvn verify
+mvn clean verify site
 ```
 
-To generate reports of the build, javadocs, and other documentation:
+That command causes Maven to execute the steps for three goals in succession.
 
-```
-mvn site
-```
+* `clean` -  results of previous builds are removed
+* `verify` - downloads dependencies, compiles, tests, packages, and then
+  verifies the package
+* `site` - generates reports in the form of a set of web pages, in target/site
 
-That generates a static web site in target/site. You could view it by opening,
-as a file in your browser, target/site/index.html. Or you could use the following
-command to generate the reports and start a local static server (using jetty)
-to facilitate viewing them:
-
-```
-mvn site:run
-```
-
-Go to http://localhost:8080/ to see the reports in your browser.
-
+You can view the reports by opening them directly (as files) in your browser,
+or you could run `mvn site:run` to start a local static HTTP server. The
+server makes the reports available at http://localhost:8080/.
 
 ## Testing
 
-To run all of th eunit tests from the command line:
+To run all of the unit tests from the command line:
 
 ```
 mvn test
