@@ -3,6 +3,7 @@ package gov.ncbi.ids;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -82,6 +83,8 @@ public class IdResolver
     public IdResolver(IdDb iddb, Config overrides)
         throws MalformedURLException
     {
+        if (iddb == null) throw new IllegalArgumentException(
+                "IdResolver constructor: ID database cannot be null");
         this.iddb = iddb;
         Config defaults = iddb.getConfig();
         this.config = (overrides == null) ? defaults
@@ -110,6 +113,13 @@ public class IdResolver
      */
     public void setMapper(ObjectMapper mapper) {
         this.mapper = mapper;
+    }
+
+    /**
+     * Get the current Config object
+     */
+    public Config getConfig() {
+        return config;
     }
 
     // For debugging
@@ -177,9 +187,11 @@ public class IdResolver
     {
         // Parse the strings into a list of RequestId objects
         List<RequestId> allRids = parseRequestIds(reqType, reqValues);
+        log.trace("allRids: " + allRids);
 
         // Pick out those that need to be resolved, grouped by fromType
         Map<IdType, List<RequestId>> groups = groupsToResolve(allRids);
+        log.trace("groups: " + groups);
 
         // For each of those groups
         for (Map.Entry<IdType, List<RequestId>> entry : groups.entrySet()) {
@@ -193,14 +205,15 @@ public class IdResolver
             // Invoke the resolver
             ObjectNode response = (ObjectNode) mapper.readTree(url);
             if (response == null) {
-                log.info("Got null response from ID resolver for URL " + url);
+                // This should never happen (would get exception instead)
+                log.error("Got null response from ID resolver for URL " + url);
                 continue;
             }
 
             log.trace("Response from ID resolver service: " + response);
             JsonNode statusNode = response.get("status");
             if (statusNode == null) {
-                log.info("Response from ID resolver is missing status " +
+                log.error("Response from ID resolver is missing status " +
                     "field for URL " + url);
                 continue;
             }
@@ -210,7 +223,8 @@ public class IdResolver
             if (!status.equals("ok")) {
                 log.info("Error response from ID resolver for URL " + url);
                 JsonNode msg = response.get("message");
-                if (msg != null) log.info("Message: " + msg.asText());
+                if (msg != null) log.info("Message: " +
+                    URLDecoder.decode(msg.asText(), "utf8"));
                 continue;
             }
 

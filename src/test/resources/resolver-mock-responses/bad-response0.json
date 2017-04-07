@@ -1,3 +1,6 @@
+// Well-formed JSON, but this response has some problems - places where the
+// returned data doesn't conform to the implicit schema. See
+// TestIdResolver#testBadResponse0().
 {
   "status": "ok",
   "responseDate": "2017-03-16 13:54:14",

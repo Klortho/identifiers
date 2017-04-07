@@ -2,9 +2,6 @@
 
 A Java library for working with Identifiers of various resources.
 
-***Current status:*** Almost complete. All tests working except
-TestIdResolver.
-
 ## Data model
 
 An IdSet holds a list of Identifiers that all refer to the

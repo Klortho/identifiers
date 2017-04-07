@@ -1,0 +1,7 @@
+// Well-formed JSON, but the converter encountered an error
+{
+ "status": "error",
+ "message": "ID%20type%20of%20%2726uio%27%20is%20unknown",
+ "responseDate": "2017-04-07 12:01:47",
+ "request": "showaiid=yes;format=json;idtype=pmid;ids=26uio"
+}
