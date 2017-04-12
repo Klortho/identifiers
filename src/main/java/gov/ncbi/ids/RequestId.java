@@ -2,6 +2,7 @@ package gov.ncbi.ids;
 
 import static gov.ncbi.ids.RequestId.State.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -306,6 +307,13 @@ public class RequestId extends Id
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Same as getId(List<IdType>), but accepts a variable number of arguments
+     */
+    public Identifier getIdFromTypes(IdType... types) {
+        return this.getId(Arrays.asList(types));
     }
 
     /**
