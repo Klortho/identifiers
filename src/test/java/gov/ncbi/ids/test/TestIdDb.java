@@ -108,7 +108,7 @@ public class TestIdDb
         assertFalse(c.getBoolean("cache-enabled"));
         assertEquals(86400, c.getInt("cache-ttl"));
         assertEquals(50000, c.getInt("cache-size"));
-        assertEquals("pmid", c.getString("wants-type"));
+        assertEquals("aiid", c.getString("wants-type"));
         assertThat(c.getString("converter-base"), containsString("idconv"));
         assertThat(c.getString("converter-params"), containsString("showaiid=yes"));
     }

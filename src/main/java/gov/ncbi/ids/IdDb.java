@@ -274,6 +274,8 @@ public class IdDb
      * Construct a new Identifier from pre-processed data.
      */
     public Identifier makeId(IdParts idparts) {
+        if (idparts.hasProblems()) return null;
+
         return typeStream(idparts)
                 .map(type -> type.id(idparts.npValue))
                 .findFirst()

@@ -1,5 +1,6 @@
 package gov.ncbi.ids;
 
+import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.ids.RequestId.State.*;
 
 import java.util.Arrays;
@@ -39,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * as listed in the following table:
  *
  * <table>
- *   <tr><th></th><th>mainId</th><th>resolved</th><th>set</th></tr>
+ *   <tr><th></th><th>queryId</th><th>resolved</th><th>set</th></tr>
  *   <tr><th>NOT_WELL_FORMED</th><td>null</td><td>T</td><td>null</td></tr>
  *   <tr><th>UNKNOWN</th><td>Identifier</td>  <td>F</td><td>null</td></tr>
  *   <tr><th>INVALID</th><td>Identifier</td>  <td>T</td><td>null</td></tr>
@@ -70,19 +71,19 @@ public class RequestId extends Id
     /**
      * The original type specifier, if one was in effect, else null.
      */
-    private final String requestedType;
+    private final String queryType;
 
     /**
      *  The original value string, as entered by the user
      */
-    private final String requestedValue;
+    private final String queryValue;
 
     /**
-     * The result of parsing the requestedValue, either with type specified
+     * The result of parsing the queryValue, either with type specified
      * by the user or auto-determined. If this is null, then this RequestId
      * is not-well-formed.
      */
-    private final Identifier mainId;
+    private final Identifier queryId;
 
     /**
      * This will be true if the external ID resolution service has been
@@ -117,17 +118,17 @@ public class RequestId extends Id
      * the type and value strings can't be reconciled or parsed, then this
      * RequestId will be in the NOT_WELL_FORMED state.
      */
-    public RequestId(IdDb iddb, String reqType, String reqValue)
+    public RequestId(IdDb iddb, String queryType, String queryValue)
     {
         this.iddb = iddb;
-        this.requestedType = reqType;
-        this.requestedValue = reqValue;
+        this.queryType = queryType;
+        this.queryValue = queryValue;
 
-        IdParts idp = new IdParts(iddb, reqType, reqValue);
-        this.mainId = iddb.makeId(idp);
+        IdParts idp = new IdParts(iddb, this.queryType, this.queryValue);
+        this.queryId = iddb.makeId(idp);
 
         // If not-well-formed, set the "_resolved" flag to true
-        this.resolved = (mainId == null);
+        this.resolved = (queryId == null);
     }
 
 
@@ -150,7 +151,7 @@ public class RequestId extends Id
     *  GOOD            Identifier    T       IdSet
     */
     public State getState() {
-        return this.mainId == null ? NOT_WELL_FORMED :
+        return this.queryId == null ? NOT_WELL_FORMED :
                !this.resolved      ? UNKNOWN :
                this.set == null    ? INVALID :
                    GOOD;
@@ -161,7 +162,7 @@ public class RequestId extends Id
      * were successfully parsed into an Identifier object.
      */
     public boolean isWellFormed() {
-        return this.mainId != null;
+        return this.queryId != null;
     }
 
     /**
@@ -205,31 +206,42 @@ public class RequestId extends Id
      * Get the original requested type (might be null).
      */
     public String getRequestedType() {
-        return this.requestedType;
+        return this.queryType;
     }
 
     /**
      * Get the original requested value.
      */
     public String getRequestedValue() {
-        return this.requestedValue;
+        return this.queryValue;
+    }
+
+    /**
+     * Get the IdType that was specified when this object was created.
+     * Note that this is not necessarily the same as getQueryType().
+     */
+    public String getQueryType() {
+        return this.queryType;
+    }
+
+    public String getQueryValue() {
+        return this.queryValue;
     }
 
     /**
      * Get the main Identifier.
      * @return null if this RequestId is NOT_WELL_FORMED.
      */
-    public Identifier getMainId() {
-        return this.mainId;
+    public Identifier getQueryId() {
+        return this.queryId;
     }
 
     /**
-     * Get the main IdType that was specified or inferred during the
-     * instantiation.
-     * @return  null if this RequestId is NOT_WELL_FORMED.
+     * Get the IdType that was specified when this object was created.
+     * Note that this is not necessarily the same as getQueryType().
      */
-    public IdType getMainType() {
-        return this.mainId == null ? null : this.mainId.getType();
+    public IdType getQueryIdType() {
+        return this.queryId == null ? null : this.queryId.getType();
     }
 
     /**
@@ -237,8 +249,8 @@ public class RequestId extends Id
      * "PMC12345").
      * @return  null if this RequestId is NOT_WELL_FORMED.
      */
-    public String getMainValue() {
-        return this.mainId == null ? null : this.mainId.getValue();
+    public String getQueryIdValue() {
+        return this.queryId == null ? null : this.queryId.getValue();
     }
 
     /**
@@ -247,7 +259,7 @@ public class RequestId extends Id
      * @return null if this RequestId is NOT_WELL_FORMED.
      */
     public String getMainCurie() {
-        return this.mainId == null ? null : this.mainId.getCurie();
+        return this.queryId == null ? null : this.queryId.getCurie();
     }
 
     /**
@@ -278,11 +290,7 @@ public class RequestId extends Id
      * @param type  Specify an ID type. Not null.
      */
     public boolean hasType(IdType type) {
-        return this.mainId != null && (
-            this.mainId.getType().equals(type) || (
-                this.set != null && this.set.hasType(type)
-            )
-        );
+        return this.getId(type) != null;
     }
 
     /**
@@ -290,10 +298,10 @@ public class RequestId extends Id
      * @param type  Specify an ID type. Not null.
      */
     public Identifier getId(IdType type) {
-        return   this.mainId == null                ? null
-               : this.mainId.getType().equals(type) ? this.mainId
-               : this.set == null                   ? null
-                                                : this.set.getId(type);
+        return   this.queryId == null                ? null
+               : this.queryId.getType().equals(type) ? this.queryId
+               : this.set == null                    ? null
+                        : this.set.id(EXPRESSION, type);
     }
 
     /**
@@ -322,7 +330,7 @@ public class RequestId extends Id
      */
     @Override
     public boolean isVersioned() {
-        return this.mainId != null && this.mainId.isVersioned();
+        return this.queryId != null && this.queryId.isVersioned();
     }
 
 
@@ -338,7 +346,7 @@ public class RequestId extends Id
     {
         if (this.resolved) throw new IllegalStateException(
             "Attempt to resolve a RequestId that has already been resolved.");
-        if (set != null && !set.same(mainId)) throw new IllegalArgumentException(
+        if (set != null && !set.same(queryId)) throw new IllegalArgumentException(
             "Attempt to resolve a RequestId with a mismatching ID set.");
         //System.out.println("Setting _set to " + set);
         this.resolved = true;
@@ -351,9 +359,9 @@ public class RequestId extends Id
     @Override
     public int hashCode() {
         return Objects.hash(
-            this.requestedType,
-            this.requestedValue,
-            this.mainId,
+            this.queryType,
+            this.queryValue,
+            this.queryId,
             this.resolved,
             this.set
         );
@@ -367,8 +375,8 @@ public class RequestId extends Id
      */
     @Override
     public boolean same(IdScope scope, Id oid) {
-        if (oid == null || this.mainId == null) return false;
-        if (this.mainId.same(scope, oid)) return true;
+        if (oid == null || this.queryId == null) return false;
+        if (this.queryId.same(scope, oid)) return true;
         return this.set != null && this.set.same(scope, oid);
     }
 
@@ -385,16 +393,16 @@ public class RequestId extends Id
 
     /**
      * Two RequestIds are equal if they are the same in all their particulars:
-     * requestedType, requestedValue, mainId, resolved, and set.
+     * queryType, queryValue, queryId, resolved, and set.
      */
     @Override
     public boolean equals(Object other) {
         if (other == null) return false;
         if (!(other instanceof RequestId)) return false;
         RequestId orid = (RequestId) other;
-        return objEquals(this.requestedType, orid.requestedType) &&
-            objEquals(this.requestedValue, orid.requestedValue) &&
-            objEquals(this.mainId, orid.mainId) &&
+        return objEquals(this.queryType, orid.queryType) &&
+            objEquals(this.queryValue, orid.queryValue) &&
+            objEquals(this.queryId, orid.queryId) &&
             this.resolved == orid.resolved &&
             objEquals(this.set, orid.set);
     }
@@ -404,20 +412,21 @@ public class RequestId extends Id
 
     @Override
     public String toString() {
-        return "{ requested: " +
-            (requestedType == null ? "" : requestedType + ":") +
-            requestedValue + ", found: " +
-            this.getMainCurie() + " }";
+        String qType = queryType == null ? "none" : queryType;
+        String qVal = queryValue == null ? "none" : queryValue;
+        String qId = this.queryId == null ? "null" : this.queryId.getCurie();
+        return "{ query type: " + qType + ", value: " + qVal + " => id: " +
+            qId + " }";
     }
 
     public String dump() {
         String r =
             "{ " +
                "requested: { " +
-                 "type: " + (requestedType == null ? "none" : requestedType) + ", " +
-                 "value: " + requestedValue + " " +
+                 "type: " + (queryType == null ? "none" : queryType) + ", " +
+                 "value: " + queryValue + " " +
                "}, " +
-               "main: " + mainId + ", " +
+               "main: " + queryId + ", " +
                "equivalent: " + set + " " +
             "}";
         return r;

@@ -65,9 +65,9 @@ public class TestRequestId
             assertFalse(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
             assertEquals(msg, rid.isGood(), false);
-            assertNull(msg, rid.getMainId());
-            assertNull(msg, rid.getMainType());
-            assertNull(msg, rid.getMainValue());
+            assertNull(msg, rid.getQueryId());
+            assertNull(msg, rid.getQueryIdType());
+            assertNull(msg, rid.getQueryIdValue());
             assertNull(msg, rid.getMainCurie());
             assertNull(msg, rid.getIdSet());
             break;
@@ -76,21 +76,21 @@ public class TestRequestId
             assertTrue(msg, rid.isWellFormed());
             assertFalse(msg, rid.isResolved());
             assertEquals(msg, rid.isGood(), false);
-            assertNotNull(msg, rid.getMainId());
+            assertNotNull(msg, rid.getQueryId());
             break;
 
         case INVALID:
             assertTrue(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
             assertEquals(msg, rid.isGood(), false);
-            assertNotNull(msg, rid.getMainId());
+            assertNotNull(msg, rid.getQueryId());
             break;
 
         case GOOD:
             assertTrue(msg, rid.isWellFormed());
             assertTrue(msg, rid.isResolved());
             assertEquals(msg, rid.isGood(), true);
-            assertNotNull(msg, rid.getMainId());
+            assertNotNull(msg, rid.getQueryId());
             break;
         }
     }
@@ -108,15 +108,23 @@ public class TestRequestId
             assertFalse(rid.isVersioned());
         }
         assertNull(rid.getId(Arrays.asList(doi, mid, pmcid)));
+
+        RequestId rid1 = new RequestId(litIds, "blech", "77898");
+        checkState("testNotWellFormed: ", NOT_WELL_FORMED, rid1);
+        for (IdType t : Arrays.asList(pmid, pmcid, mid, doi, aiid)) {
+            assertFalse(rid1.hasType(t));
+            assertNull(rid1.getId(t));
+            assertFalse(rid1.isVersioned());
+        }
     }
+
 
     @Test
     public void testUnknown() {
         RequestId rid = new RequestId(litIds, "pMC1234");
         assertEquals(UNKNOWN, rid.getState());
-        assertEquals(
-            "{ requested: pMC1234, " +
-                "found: pmcid:PMC1234 }",
+        log.debug("testUnknown: rid: " + rid.toString());
+        assertEquals("{ query type: none, value: pMC1234 => id: pmcid:PMC1234 }",
             rid.toString());
         checkState("testUnknown: ", UNKNOWN, rid);
 
@@ -129,10 +137,10 @@ public class TestRequestId
         assertSame(litIds, rid.getIdDb());
         assertNull(rid.getRequestedType());
         assertEquals("pMC1234", rid.getRequestedValue());
-        assertEquals(litIds.id("pmcid:PMC1234"), rid.getMainId());
+        assertEquals(litIds.id("pmcid:PMC1234"), rid.getQueryId());
 
-        assertEquals(pmcid, rid.getMainType());
-        assertEquals("PMC1234", rid.getMainValue());
+        assertEquals(pmcid, rid.getQueryIdType());
+        assertEquals("PMC1234", rid.getQueryIdValue());
         assertEquals("pmcid:PMC1234", rid.getMainCurie());
 
         assertTrue(rid.hasType(pmcid));
@@ -203,7 +211,7 @@ public class TestRequestId
         // Not equal to one created with *almost* the same data, even though
         // the mainId's are equal.
         RequestId ridC = new RequestId(litIds, "pmcid", "PMC1234");
-        assertEquals(ridA.getMainId(), ridC.getMainId());
+        assertEquals(ridA.getQueryId(), ridC.getQueryId());
         assertNotEquals(ridA, ridC);
         checkEqualsMethod("Different", ridA, ridC);
     }
@@ -256,7 +264,7 @@ public class TestRequestId
                 .add(pmid.id("123456"),
                      pmcid.id("1234"),
                      doi.id("10.13/23434.56"));
-        assertTrue(rset.same(rid.getMainId()));
+        assertTrue(rset.same(rid.getQueryId()));
         rid.resolve(rset);
         checkState("testGood: ", GOOD, rid);
 

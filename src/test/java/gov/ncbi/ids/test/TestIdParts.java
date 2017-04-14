@@ -75,7 +75,8 @@ public class TestIdParts
         assertThat(idp.typeSpec, instanceOf(IdType.class));
         assertEquals(mid, idp.typeSpec);
         assertEquals("pmcid", idp.prefix);
-        assertEquals(mid, idp.type);
+        //assertEquals(mid, idp.type);
+        assertNull(idp.type);
         assertEquals("1234", idp.npValue);
 
         // specify the type as a string
@@ -96,7 +97,8 @@ public class TestIdParts
         assertThat(idp.typeSpec, instanceOf(String.class));
         assertEquals("fleegle", idp.typeSpec);
         assertEquals("pmid", idp.prefix);
-        assertEquals(pmid, idp.type);
+        //assertEquals(pmid, idp.type);
+        assertNull(idp.type);
         assertEquals("5", idp.npValue);
 
         // invalid type prefix
@@ -107,7 +109,8 @@ public class TestIdParts
         assertThat(idp.typeSpec, instanceOf(String.class));
         assertEquals("aiid", idp.typeSpec);
         assertEquals("aiids", idp.prefix);
-        assertEquals(aiid, idp.type);
+        //assertEquals(aiid, idp.type);
+        assertNull(idp.type);
         assertEquals("56", idp.npValue);
 
         // both errors

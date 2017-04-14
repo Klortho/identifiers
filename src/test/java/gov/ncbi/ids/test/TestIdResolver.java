@@ -3,6 +3,7 @@ package gov.ncbi.ids.test;
 import static gov.ncbi.ids.IdDbJsonReader.getJsonFeatures;
 import static gov.ncbi.ids.RequestId.State.*;
 import static gov.ncbi.ids.test.TestRequestId.checkState;
+import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.test.TestHelper.assertThrows;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,10 +37,12 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
+import gov.ncbi.ids.Id;
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
 import gov.ncbi.ids.IdSet;
 import gov.ncbi.ids.IdType;
+import gov.ncbi.ids.Identifier;
 import gov.ncbi.ids.NonVersionedIdSet;
 import gov.ncbi.ids.RequestId;
 import gov.ncbi.ids.VersionedIdSet;
@@ -136,6 +139,9 @@ public class TestIdResolver
         },
         new String[] {
             "idtype=pmid&ids=44444", "bad-response4"
+        },
+        new String[] {
+            "idtype=pmid&ids=26829486", "pmid-26829486"
         }
     };
 
@@ -259,7 +265,7 @@ public class TestIdResolver
         // Test the custom initialization routine above
         initLit();
         assertSame(iddb, resolver.getIdDb());
-        assertEquals(pmid, resolver.getWantsType());
+        assertEquals(aiid, resolver.getWantsType());
 
         log.debug(resolver.dumpConfig());
     }
@@ -315,23 +321,23 @@ public class TestIdResolver
         assertEquals(false, rid0.isGood());
         assertEquals("pMid", rid0.getRequestedType());
         assertEquals("12345", rid0.getRequestedValue());
-        assertEquals(pmid.id("12345"), rid0.getMainId());
+        assertEquals(pmid.id("12345"), rid0.getQueryId());
 
         // mixed types
         rids = resolver.parseRequestIds(null, "PMC6788,845763,NIHMS99878,PMC778.4");
         assertEquals(4, rids.size());
-        assertEquals(pmcid, rids.get(0).getMainType());
-        assertEquals(pmid, rids.get(1).getMainType());
-        assertEquals(mid, rids.get(2).getMainType());
-        assertEquals(pmcid, rids.get(3).getMainType());
+        assertEquals(pmcid, rids.get(0).getQueryIdType());
+        assertEquals(pmid, rids.get(1).getQueryIdType());
+        assertEquals(mid, rids.get(2).getQueryIdType());
+        assertEquals(pmcid, rids.get(3).getQueryIdType());
 
         // some non-well-formed
         rids = resolver.parseRequestIds("pmcid", "PMC6788,845763,NIHMS99878,PMC778.4");
         assertEquals(4, rids.size());
-        assertEquals(pmcid.id("PMC6788"), rids.get(0).getMainId());
-        assertEquals(pmcid.id("PMC845763"), rids.get(1).getMainId());
+        assertEquals(pmcid.id("PMC6788"), rids.get(0).getQueryId());
+        assertEquals(pmcid.id("PMC845763"), rids.get(1).getQueryId());
         assertEquals(NOT_WELL_FORMED, rids.get(2).getState());
-        assertEquals(pmcid.id("PMC778.4"), rids.get(3).getMainId());
+        assertEquals(pmcid.id("PMC778.4"), rids.get(3).getQueryId());
     }
 
     /**
@@ -340,7 +346,10 @@ public class TestIdResolver
     public void
     checkGroup(IdType type, Map<IdType, List<RequestId>> groups, String ...exp)
     {
-        List<String> group = groups.get(type).stream()
+        List<RequestId> reqIds = groups.get(type);
+        assertNotNull(reqIds);
+
+        List<String> group = reqIds.stream()
             .map(rid -> rid.getMainCurie())
             .collect(Collectors.toList());
         assertEquals(Arrays.asList(exp), group);
@@ -381,10 +390,15 @@ public class TestIdResolver
 
         Map<IdType, List<RequestId>> groups = resolver.groupsToResolve(rids);
         assertEquals(3, groups.entrySet().size());
+
+        // Don't have to resolve the wanted type
+        assertNull(groups.get(aiid));
+        checkGroup(pmid, groups, "pmid:34567", "pmid:34567.5");
         checkGroup(pmcid, groups,
             "pmcid:PMC77898", "pmcid:PMC34567", "pmcid:PMC77898.1");
         checkGroup(mid, groups, "mid:MID7");
-        checkGroup(aiid, groups, "aiid:77898", "aiid:778");
+
+        //checkGroup(aiid, groups, "aiid:77898", "aiid:778");
     }
 
     /**
@@ -633,7 +647,7 @@ public class TestIdResolver
         checkState("pmid:22368089", GOOD, rid1);
 
         RequestId rid2 = ridList.get(2);
-        checkState("Well-formed, but invalid pmid `1`", INVALID, rid2);
+        checkState("pmid:1", GOOD, rid2);
 
         RequestId rid3 = ridList.get(3);
         checkState("pmid:26829486", GOOD, rid3);
@@ -648,19 +662,79 @@ public class TestIdResolver
             throws Exception
     {
         initLit();
-        assertEquals(pmid, resolver.getWantsType());
+        assertEquals(aiid, resolver.getWantsType());
 
-        List<RequestId> ridList = resolver.resolveIds("26829486,PMC3539452");
-        assertEquals(2, ridList.size());
+        List<RequestId> ridList = resolver.resolveIds(
+            "26829486,PMC3539452,aiid:3539450");
+        //List<RequestId> ridList = resolver.resolveIds("26829486");
+        assertEquals(3, ridList.size());
 
+        //------
         RequestId rid0 = ridList.get(0);
+        assertNull(rid0.getQueryType());
+        assertEquals("26829486", rid0.getQueryValue());
+        assertEquals(pmid.id("26829486"), rid0.getQueryId());
+        assertEquals(pmid, rid0.getQueryIdType());
+        assertEquals("26829486", rid0.getQueryIdValue());
         assertTrue(rid0.hasType(pmid));
-        assertEquals("26829486", rid0.getId(pmid).getValue());
-        checkState("rid0", UNKNOWN, rid0);
 
+        IdSet idSet0 = rid0.getIdSet();
+        log.trace("idSet: " + idSet0);
+
+        Identifier pmid0 = rid0.getId(pmid);
+        assertNotNull(pmid0);
+        assertEquals("26829486", pmid0.getValue());
+
+        assertTrue(rid0.hasType(aiid));
+        assertEquals(GOOD, rid0.getState());
+        checkState("rid0", GOOD, rid0);
+        Identifier aiid0 = rid0.getId(aiid);
+        assertNotNull(aiid0);
+        assertEquals("4734780", aiid0.getValue());
+        checkState("rid0", GOOD, rid0);
+
+        //------
         RequestId rid1 = ridList.get(1);
-        assertTrue(rid1.hasType(pmid));
-        assertEquals("22368089", rid1.getId(pmid).getValue());
+        assertNull(rid1.getQueryType());
+        assertEquals("PMC3539452", rid1.getQueryValue());
+        assertEquals(pmcid.id("PMC3539452"), rid1.getQueryId());
+        assertEquals(pmcid, rid1.getQueryIdType());
+        assertEquals("PMC3539452", rid1.getQueryIdValue());
+        assertTrue(rid1.hasType(pmcid));
+
+        IdSet idSet1 = rid1.getIdSet();
+        log.trace("idSet: " + idSet1);
+
+        Identifier pmcid1 = rid1.getId(pmcid);
+        assertNotNull(pmcid1);
+        assertEquals("PMC3539452", pmcid1.getValue());
+
+        assertTrue(rid1.hasType(aiid));
+        assertEquals(GOOD, rid1.getState());
         checkState("rid1", GOOD, rid1);
+        Identifier aiid1 = rid1.getId(aiid);
+        assertNotNull(aiid1);
+        assertEquals("3539452", aiid1.getValue());
+        checkState("rid1", GOOD, rid1);
+
+        //------  aiid:1324
+        RequestId rid2 = ridList.get(2);
+        //assertEquals("aiid", rid2.getQueryType());
+        assertEquals("aiid:3539450", rid2.getQueryValue());
+        assertEquals(aiid.id("3539450"), rid2.getQueryId());
+        assertEquals(aiid, rid2.getQueryIdType());
+        assertEquals("3539450", rid2.getQueryIdValue());
+        assertTrue(rid2.hasType(aiid));
+
+        IdSet idSet2 = rid2.getIdSet();
+        log.trace("idSet: " + idSet2);
+
+        Identifier aiid2 = rid2.getId(aiid);
+        assertNotNull(aiid2);
+        assertEquals("3539450", aiid2.getValue());
+
+        assertTrue(rid2.hasType(aiid));
+        assertEquals(UNKNOWN, rid2.getState());
+        checkState("rid2", UNKNOWN, rid2);
     }
 }

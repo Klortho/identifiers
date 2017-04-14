@@ -280,7 +280,7 @@ public class IdResolver
             if (rid != null && rid.isWellFormed() &&
                 !rid.isResolved() && !rid.hasType(wantsType))
             {
-                IdType fromType = rid.getMainType();
+                IdType fromType = rid.getQueryIdType();
 
                 List<RequestId> group = groups.get(fromType);
                 if (group == null) {
@@ -309,11 +309,11 @@ public class IdResolver
 
         // Join the ID values for the query string
         String idsStr = rids.stream()
-            .map(RequestId::getMainValue)
+            .map(RequestId::getQueryIdValue)
             .collect(Collectors.joining(","));
 
         try {
-            String typeStr = rids.get(0).getMainType().getName();
+            String typeStr = rids.get(0).getQueryIdType().getName();
             return new URL(converterUrl + "idtype=" + typeStr +
                 "&ids=" + idsStr);
         }
@@ -476,14 +476,17 @@ public class IdResolver
     public RequestId findAndBind(IdType fromType, List<RequestId> rids,
             IdSet set)
     {
+      /*
+        System.out.println("-------------------------- in findAndBind");
+        System.out.println("  fromType: " + fromType);
+        System.out.println("  wantsType: " + wantsType);
+        System.out.println("  rids: " + rids);
+        System.out.println("  set: " + set);  */
+
         Identifier globId = set.getId(fromType);
         for (RequestId rid : rids) {
-            if (globId.equals(rid.getMainId())) {
-                if (set.hasType(wantsType))
-                    rid.resolve(set);
-                else
-                    rid.resolve(null);
-                return rid;
+            if (globId.equals(rid.getQueryId())) {
+                rid.resolve(set);
             }
         }
         return null;

@@ -6,6 +6,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({
+    TestConfig.class,
     TestIdParser.class,
     TestIdParts.class,
     TestIdType.class,

@@ -1,0 +1,20 @@
+{
+ "status": "ok",
+ "responseDate": "2017-04-14 11:41:33",
+ "request": "showaiid=yes;format=json;tool=ctxp;email=pubmedcentral%40ncbi.nlm.nih.gov;idtype=pmid;ids=26829486",
+ "records": [
+   {
+    "pmcid": "PMC4734780",
+    "pmid": "26829486",
+    "aiid": "4734780",
+    "doi": "10.1371/journal.pntd.0004413",
+    "versions": [
+      {
+       "pmcid": "PMC4734780.1",
+       "aiid": "4734780",
+       "current": "true"
+      }
+    ]
+   }
+ ]
+}

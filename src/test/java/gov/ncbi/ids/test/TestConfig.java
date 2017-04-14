@@ -71,7 +71,7 @@ public class TestConfig
             "ncbi-ids.cache-enabled", "boolean", false,
             "ncbi-ids.cache-ttl", "int", 86400,
             "ncbi-ids.cache-size", "int", 50000,
-            "ncbi-ids.wants-type", "string-exact", "pmid",
+            "ncbi-ids.wants-type", "string-exact", "aiid",
             "ncbi-ids.converter-base", "string-contains", "ncbi.nlm.nih.gov",
             "ncbi-ids.converter-params", "string-contains", "showaiid=yes"
         );

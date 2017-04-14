@@ -95,16 +95,22 @@ public class IdParts
 
         // Convert the prefix (if given) into an IdType
         IdType prefixType = hasPrefix ? iddb.getType(self.prefix) : null;
-        if (hasPrefix && prefixType == null)
+        if (hasPrefix && prefixType == null) {
             self.problems.add(BAD_TYPE_PREFIX);
+            self.type = null;
+        }
 
         // See if the type was specified twice, with a mismatch
-        if (typeSpecObj != null && prefixType != null &&
+        else if (typeSpecObj != null && prefixType != null &&
             !typeSpecObj.equals(prefixType))
+        {
             self.problems.add(TYPE_MISMATCH);
+            self.type = null;
+        }
 
-        // The specType takes precedence
-        self.type = typeSpecObj != null ? typeSpecObj : prefixType;
+        else {
+            self.type = typeSpecObj != null ? typeSpecObj : prefixType;
+        }
     }
 
     /**
@@ -126,10 +132,15 @@ public class IdParts
 
         // Try to get the type corresponding to the string arg
         IdType typeSpecObj = typeSpec == null ? null : iddb.getType(typeSpec);
-        if (typeSpec != null && typeSpecObj == null)
+        // Was the a problem?
+        boolean problem = (typeSpec != null && typeSpecObj == null);
+        if (problem) {
             problems.add(BAD_TYPE_SPEC);
+        }
 
         parseValue(this, iddb, typeSpecObj, value);
+
+        if (problem) this.type = null;
     }
 
     /**
