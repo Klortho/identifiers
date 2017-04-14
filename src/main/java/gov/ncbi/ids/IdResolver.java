@@ -39,12 +39,11 @@ public class IdResolver
     private static final Logger log = LoggerFactory.getLogger(IdResolver.class);
 
     private final IdDb iddb;
-    private final IdType wantedType;
     private Config config;
-
     public final boolean cacheEnabled;
     public final int cacheTtl;
     public final int cacheSize;
+    private final IdType wantsType;
     public final URL converterBase;
     public final String converterParams;
 
@@ -90,7 +89,7 @@ public class IdResolver
         this.config = (overrides == null) ? defaults
             : overrides.withFallback(defaults);
 
-        this.wantedType = //wantedType;
+        this.wantsType = //wantsType;
                 iddb.getType(this.config.getString("ncbi-ids.wants-type"));
         this.cacheEnabled = this.config.getBoolean("ncbi-ids.cache-enabled");
         this.cacheTtl = this.config.getInt("ncbi-ids.cache-ttl");
@@ -143,8 +142,8 @@ public class IdResolver
     /**
      * Get the wanted IdType
      */
-    public IdType getWantedType() {
-        return wantedType;
+    public IdType getWantsType() {
+        return wantsType;
     }
 
     /**
@@ -154,7 +153,7 @@ public class IdResolver
      *   a user-supplied query. Each one might or might not have a prefix. The
      *   original type of each one is determined independently.
      * @return a List of RequestIds. Best effort will be made to ensure each
-     *   ID value string is resolved to an Identifier with the wantedType.
+     *   ID value string is resolved to an Identifier with the wantsType.
      *
      * For reference, here's the list of routines this calls:
      * - parseRequestIds(String, String)  - create a new list of RequestId's
@@ -279,7 +278,7 @@ public class IdResolver
 
         for (RequestId rid : rids) {
             if (rid != null && rid.isWellFormed() &&
-                !rid.isResolved() && !rid.hasType(wantedType))
+                !rid.isResolved() && !rid.hasType(wantsType))
             {
                 IdType fromType = rid.getMainType();
 
@@ -480,7 +479,7 @@ public class IdResolver
         Identifier globId = set.getId(fromType);
         for (RequestId rid : rids) {
             if (globId.equals(rid.getMainId())) {
-                if (set.hasType(wantedType))
+                if (set.hasType(wantsType))
                     rid.resolve(set);
                 else
                     rid.resolve(null);

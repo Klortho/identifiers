@@ -259,7 +259,7 @@ public class TestIdResolver
         // Test the custom initialization routine above
         initLit();
         assertSame(iddb, resolver.getIdDb());
-        assertEquals(pmid, resolver.getWantedType());
+        assertEquals(pmid, resolver.getWantsType());
 
         log.debug(resolver.dumpConfig());
     }
@@ -594,7 +594,7 @@ public class TestIdResolver
         throws Exception
     {
         initLit("pmcid");
-        assertEquals(pmcid, resolver.getWantedType());
+        assertEquals(pmcid, resolver.getWantsType());
 
         List<RequestId> ridList = resolver.resolveIds("26829486,22368089");
         assertEquals(2, ridList.size());
@@ -620,7 +620,7 @@ public class TestIdResolver
     {
         initLit("pmcid");
         resolver.setMapper(mockMapper);
-        assertEquals(pmcid, resolver.getWantedType());
+        assertEquals(pmcid, resolver.getWantsType());
 
         List<RequestId> ridList =
             resolver.resolveIds("fleegle,22368089,1,26829486");
@@ -648,7 +648,7 @@ public class TestIdResolver
             throws Exception
     {
         initLit();
-        assertEquals(pmid, resolver.getWantedType());
+        assertEquals(pmid, resolver.getWantsType());
 
         List<RequestId> ridList = resolver.resolveIds("26829486,PMC3539452");
         assertEquals(2, ridList.size());
