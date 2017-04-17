@@ -90,12 +90,12 @@ public class IdResolver
             : overrides.withFallback(defaults);
 
         this.wantsType = //wantsType;
-                iddb.getType(this.config.getString("ncbi-ids.wants-type"));
-        this.cacheEnabled = this.config.getBoolean("ncbi-ids.cache-enabled");
-        this.cacheTtl = this.config.getInt("ncbi-ids.cache-ttl");
-        this.cacheSize = this.config.getInt("ncbi-ids.cache-size");
-        this.converterBase = new URL(this.config.getString("ncbi-ids.converter-base"));
-        this.converterParams = this.config.getString("ncbi-ids.converter-params");
+                iddb.getType(this.config.getString("ncbi.ids.resolver.wants-type"));
+        this.cacheEnabled = this.config.getBoolean("ncbi.ids.cache.enabled");
+        this.cacheTtl = this.config.getInt("ncbi.ids.cache.ttl");
+        this.cacheSize = this.config.getInt("ncbi.ids.cache.size");
+        this.converterBase = new URL(this.config.getString("ncbi.ids.converter.base"));
+        this.converterParams = this.config.getString("ncbi.ids.converter.params");
 
         this.converterUrl = converterBase + "?" + converterParams + "&";
     }
@@ -122,15 +122,16 @@ public class IdResolver
     }
 
     // For debugging
+  /*
     public String dumpConfig() {
         return "config: {\n" +
-                "  cache-enabled: " + cacheEnabled + "\n" +
-                "  cache-ttl: " + cacheTtl + "\n" +
-                "  cache-size: " + cacheSize + "\n" +
+                "  cache.enabled: " + cacheEnabled + "\n" +
+                "  cache.ttl: " + cacheTtl + "\n" +
+                "  cache.size: " + cacheSize + "\n" +
                 "  converter-base: " + converterBase + "\n" +
                 "  converter-params: " + converterParams + "\n" +
                 "}";
-    }
+    }*/
 
     /**
      * Get the IdDb in use.

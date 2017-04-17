@@ -195,7 +195,7 @@ public class TestIdResolver
     {
         Config defaults = ConfigFactory.load();
         Config config = wanted == null ? defaults :
-            defaults.withValue("ncbi-ids.wants-type",
+            defaults.withValue("ncbi.ids.resolver.wants-type",
                 ConfigValueFactory.fromAnyRef(wanted));
 
         //log.trace("getting literature id database with config: " + config);
@@ -255,19 +255,19 @@ public class TestIdResolver
         // Use constructor directly, default config
         IdDb dummy = new IdDb("dummy");
         IdResolver r1 = new IdResolver(dummy);
-        assertEquals(86400, r1.getConfig().getInt("ncbi-ids.cache-ttl"));
+        assertEquals(86400, r1.getConfig().getInt("ncbi.ids.cache.ttl"));
 
         // Override a config setting
-        Config override = ConfigFactory.parseString("ncbi-ids.cache-ttl=42");
+        Config override = ConfigFactory.parseString("ncbi.ids.cache.ttl=42");
         IdResolver r2 = new IdResolver(dummy, override);
-        assertEquals(42, r2.getConfig().getInt("ncbi-ids.cache-ttl"));
+        assertEquals(42, r2.getConfig().getInt("ncbi.ids.cache.ttl"));
 
         // Test the custom initialization routine above
         initLit();
         assertSame(iddb, resolver.getIdDb());
         assertEquals(aiid, resolver.getWantsType());
 
-        log.debug(resolver.dumpConfig());
+        log.debug("Config: " + resolver.getConfig());
     }
 
     /**

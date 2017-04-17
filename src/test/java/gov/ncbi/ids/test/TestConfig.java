@@ -68,12 +68,12 @@ public class TestConfig
     {
         IdDb iddb = IdDb.getLiteratureIdDb();
         checkConfig(iddb.getConfig(),
-            "ncbi-ids.cache-enabled", "boolean", false,
-            "ncbi-ids.cache-ttl", "int", 86400,
-            "ncbi-ids.cache-size", "int", 50000,
-            "ncbi-ids.wants-type", "string-exact", "aiid",
-            "ncbi-ids.converter-base", "string-contains", "ncbi.nlm.nih.gov",
-            "ncbi-ids.converter-params", "string-contains", "showaiid=yes"
+            "ncbi.ids.cache.enabled", "boolean", false,
+            "ncbi.ids.cache.ttl", "int", 86400,
+            "ncbi.ids.cache.size", "int", 50000,
+            "ncbi.ids.resolver.wants-type", "string-exact", "aiid",
+            "ncbi.ids.converter.base", "string-contains", "ncbi.nlm.nih.gov",
+            "ncbi.ids.converter.params", "string-contains", "showaiid=yes"
         );
     }
 
@@ -87,18 +87,18 @@ public class TestConfig
         Config config = ConfigFactory.load("test-config");
         checkConfig(config,
                 "my-app.split", "string-exact", "bingo",
-                "ncbi-ids.cache-enabled", "boolean", false,
-                "ncbi-ids.wants-type", "string-exact", "doi"
+                "ncbi.ids.cache.enabled", "boolean", false,
+                "ncbi.ids.resolver.wants-type", "string-exact", "doi"
         );
 
         IdDb iddb = IdDb.getLiteratureIdDb(config);
         checkConfig(iddb.getConfig(),
-                "ncbi-ids.cache-enabled", "boolean", false,
-                "ncbi-ids.cache-ttl", "int", 86400,
-                "ncbi-ids.cache-size", "int", 50000,
-                "ncbi-ids.wants-type", "string-exact", "doi",
-                "ncbi-ids.converter-base", "string-contains", "ncbi.nlm.nih.gov",
-                "ncbi-ids.converter-params", "string-contains", "showaiid=yes"
+                "ncbi.ids.cache.enabled", "boolean", false,
+                "ncbi.ids.cache.ttl", "int", 86400,
+                "ncbi.ids.cache.size", "int", 50000,
+                "ncbi.ids.resolver.wants-type", "string-exact", "doi",
+                "ncbi.ids.converter.base", "string-contains", "ncbi.nlm.nih.gov",
+                "ncbi.ids.converter.params", "string-contains", "showaiid=yes"
         );
     }
 
@@ -108,13 +108,14 @@ public class TestConfig
     {
         Config defaults = ConfigFactory.load();
         Config newConfig = defaults.withValue(
-            "ncbi-ids.wants-type", ConfigValueFactory.fromAnyRef("pmcid"));
+            "ncbi.ids.resolver.wants-type",
+            ConfigValueFactory.fromAnyRef("pmcid"));
 
         IdDb iddb = IdDb.getLiteratureIdDb(newConfig);
         checkConfig(iddb.getConfig(),
-                "ncbi-ids.cache-enabled", "boolean", false,
-                "ncbi-ids.cache-size", "int", 50000,
-                "ncbi-ids.wants-type", "string-exact", "pmcid"
+                "ncbi.ids.cache.enabled", "boolean", false,
+                "ncbi.ids.cache.size", "int", 50000,
+                "ncbi.ids.resolver.wants-type", "string-exact", "pmcid"
         );
     }
 }

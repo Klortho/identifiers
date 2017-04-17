@@ -104,13 +104,13 @@ public class TestIdDb
     @Test
     public void testConfig()
     {
-        Config c = iddb.getConfig().getConfig("ncbi-ids");
-        assertFalse(c.getBoolean("cache-enabled"));
-        assertEquals(86400, c.getInt("cache-ttl"));
-        assertEquals(50000, c.getInt("cache-size"));
-        assertEquals("aiid", c.getString("wants-type"));
-        assertThat(c.getString("converter-base"), containsString("idconv"));
-        assertThat(c.getString("converter-params"), containsString("showaiid=yes"));
+        Config c = iddb.getConfig().getConfig("ncbi.ids");
+        assertFalse(c.getBoolean("cache.enabled"));
+        assertEquals(86400, c.getInt("cache.ttl"));
+        assertEquals(50000, c.getInt("cache.size"));
+        assertEquals("aiid", c.getString("resolver.wants-type"));
+        assertThat(c.getString("converter.base"), containsString("idconv"));
+        assertThat(c.getString("converter.params"), containsString("showaiid=yes"));
     }
 
     /**
