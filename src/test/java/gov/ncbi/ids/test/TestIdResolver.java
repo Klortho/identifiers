@@ -195,7 +195,7 @@ public class TestIdResolver
     {
         Config defaults = ConfigFactory.load();
         Config config = wanted == null ? defaults :
-            defaults.withValue("ncbi.ids.resolver.wants-type",
+            defaults.withValue("ncbi.ids.resolver.wanted-type",
                 ConfigValueFactory.fromAnyRef(wanted));
 
         //log.trace("getting literature id database with config: " + config);
@@ -265,7 +265,7 @@ public class TestIdResolver
         // Test the custom initialization routine above
         initLit();
         assertSame(iddb, resolver.getIdDb());
-        assertEquals(aiid, resolver.getWantsType());
+        assertEquals(aiid, resolver.getWantedType());
 
         log.debug("Config: " + resolver.getConfig());
     }
@@ -600,15 +600,16 @@ public class TestIdResolver
 
 
     /**
-     * Verify that if we create an IdResolver that "wants" pmcids, and feed
-     * it a list of pmids, that it will call the resolver service on them.
+     * Verify that if we create an IdResolver that wants to resolve every ID
+     * to pmcids, and feed it a list of pmids, that it will call the resolver
+     * service on them.
      */
     @Test
     public void testIdResolver_0()
         throws Exception
     {
         initLit("pmcid");
-        assertEquals(pmcid, resolver.getWantsType());
+        assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList = resolver.resolveIds("26829486,22368089");
         assertEquals(2, ridList.size());
@@ -634,7 +635,7 @@ public class TestIdResolver
     {
         initLit("pmcid");
         resolver.setMapper(mockMapper);
-        assertEquals(pmcid, resolver.getWantsType());
+        assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList =
             resolver.resolveIds("fleegle,22368089,1,26829486");
@@ -662,7 +663,7 @@ public class TestIdResolver
             throws Exception
     {
         initLit();
-        assertEquals(aiid, resolver.getWantsType());
+        assertEquals(aiid, resolver.getWantedType());
 
         List<RequestId> ridList = resolver.resolveIds(
             "26829486,PMC3539452,aiid:3539450");

@@ -43,7 +43,7 @@ public class IdResolver
     public final boolean cacheEnabled;
     public final int cacheTtl;
     public final int cacheSize;
-    private final IdType wantsType;
+    private final IdType wantedIdType;
     public final URL converterBase;
     public final String converterParams;
 
@@ -74,7 +74,7 @@ public class IdResolver
      *   determines the default config values to be used.
      * @param overrides - A Config object that contains values for those
      *   config variables that are to be overridden. The ones that effect
-     *   the IdResolver are: `wants-type`, `converter-base`, and
+     *   the IdResolver are: `wanted-type`, `converter-base`, and
      *   `converter-params`.
      * @throws MalformedURLException  This will be thrown if the URL to the
      *   backend service is not valid.
@@ -89,8 +89,8 @@ public class IdResolver
         this.config = (overrides == null) ? defaults
             : overrides.withFallback(defaults);
 
-        this.wantsType = //wantsType;
-                iddb.getType(this.config.getString("ncbi.ids.resolver.wants-type"));
+        this.wantedIdType = //wantedIdType;
+                iddb.getType(this.config.getString("ncbi.ids.resolver.wanted-type"));
         this.cacheEnabled = this.config.getBoolean("ncbi.ids.cache.enabled");
         this.cacheTtl = this.config.getInt("ncbi.ids.cache.ttl");
         this.cacheSize = this.config.getInt("ncbi.ids.cache.size");
@@ -131,8 +131,8 @@ public class IdResolver
     /**
      * Get the wanted IdType
      */
-    public IdType getWantsType() {
-        return wantsType;
+    public IdType getWantedType() {
+        return wantedIdType;
     }
 
     /**
@@ -142,7 +142,7 @@ public class IdResolver
      *   a user-supplied query. Each one might or might not have a prefix. The
      *   original type of each one is determined independently.
      * @return a List of RequestIds. Best effort will be made to ensure each
-     *   ID value string is resolved to an Identifier with the wantsType.
+     *   ID value string is resolved to an Identifier with the wantedIdType.
      *
      * For reference, here's the list of routines this calls:
      * - parseRequestIds(String, String)  - create a new list of RequestId's
@@ -267,7 +267,7 @@ public class IdResolver
 
         for (RequestId rid : rids) {
             if (rid != null && rid.isWellFormed() &&
-                !rid.isResolved() && !rid.hasType(wantsType))
+                !rid.isResolved() && !rid.hasType(wantedIdType))
             {
                 IdType fromType = rid.getQueryIdType();
 
@@ -468,7 +468,7 @@ public class IdResolver
       /*
         System.out.println("-------------------------- in findAndBind");
         System.out.println("  fromType: " + fromType);
-        System.out.println("  wantsType: " + wantsType);
+        System.out.println("  wantedIdType: " + wantedIdType);
         System.out.println("  rids: " + rids);
         System.out.println("  set: " + set);  */
 
