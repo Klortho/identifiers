@@ -149,7 +149,7 @@ public class IdType
 
     @Override
     public String toString() {
-        return "IdType " + this.name;
+        return this.name;
     }
 
     /**

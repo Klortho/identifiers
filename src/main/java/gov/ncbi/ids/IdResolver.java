@@ -121,18 +121,6 @@ public class IdResolver
         return config;
     }
 
-    // For debugging
-  /*
-    public String dumpConfig() {
-        return "config: {\n" +
-                "  cache.enabled: " + cacheEnabled + "\n" +
-                "  cache.ttl: " + cacheTtl + "\n" +
-                "  cache.size: " + cacheSize + "\n" +
-                "  converter-base: " + converterBase + "\n" +
-                "  converter-params: " + converterParams + "\n" +
-                "}";
-    }*/
-
     /**
      * Get the IdDb in use.
      */

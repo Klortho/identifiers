@@ -183,26 +183,8 @@ public class IdDb
     public IdResolver newResolver()
         throws MalformedURLException
     {
-        return newResolver(null);
+        return new IdResolver(this);
     }
-
-    /**
-     * Create a new IdResolver, while overriding some configuration
-     * values.
-     * @param config  A Config object with just those parameters that should
-     *   be different from the defaults. This could be created with, for example,
-     *   <pre>Config override = ConfigFactory.parseString("ncbi-ids.wants-type=pmid"));
-     *   IdResolver resolve = iddb.newResolver(override);</pre>
-     * @return
-     * @throws MalformedURLException
-     */
-
-    public IdResolver newResolver(Config overrides)
-            throws MalformedURLException
-    {
-        return new IdResolver(this, overrides);
-    }
-
 
 
     /////////////////////////////////////////////////////////////////////

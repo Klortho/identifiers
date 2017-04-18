@@ -344,11 +344,14 @@ public class RequestId extends Id
     public void resolve(IdSet set)
             throws IllegalStateException, IllegalArgumentException
     {
+     /* System.out.println("----------- in RequestId.resolve -----\n" +
+            ", this: " + this + ", this-curie: " +
+            this.getMainCurie() +
+            ", IdSet: " + set); */
         if (this.resolved) throw new IllegalStateException(
             "Attempt to resolve a RequestId that has already been resolved.");
         if (set != null && !set.same(queryId)) throw new IllegalArgumentException(
             "Attempt to resolve a RequestId with a mismatching ID set.");
-        //System.out.println("Setting _set to " + set);
         this.resolved = true;
         this.set = set;
     }
@@ -421,7 +424,7 @@ public class RequestId extends Id
 
     public String dump() {
         String r =
-            "{ " +
+            "{ state of this RequestId: " + this.getState() + "\n" +
                "requested: { " +
                  "type: " + (queryType == null ? "none" : queryType) + ", " +
                  "value: " + queryValue + " " +

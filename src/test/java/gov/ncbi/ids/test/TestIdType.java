@@ -137,7 +137,7 @@ public class TestIdType
     @Test
     public void testToString() {
         IdType idt0 = new IdType("idt0", new ArrayList<IdParser>());
-        assertEquals("IdType idt0", idt0.toString());
+        assertEquals("idt0", idt0.toString());
 
         IdType idt1 = new IdType("pmcid",
                 new ArrayList<IdParser>(Arrays.asList(
@@ -146,6 +146,6 @@ public class TestIdType
                     new IdParser("^([Pp][Mm][Cc]\\d+)$", false, UPPERCASE),
                     new IdParser("^([Pp][Mm][Cc]\\d+(\\.\\d+)?)$", true, UPPERCASE)
             )));
-        assertEquals("IdType pmcid", idt1.toString());
+        assertEquals("pmcid", idt1.toString());
     }
 }
