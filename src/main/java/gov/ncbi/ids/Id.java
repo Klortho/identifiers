@@ -1,10 +1,6 @@
 package gov.ncbi.ids;
 
-import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
-import static gov.ncbi.ids.Id.IdScope.RESOURCE;
-import static gov.ncbi.ids.Id.IdScope.WORK;
-
-import javax.xml.parsers.DocumentBuilderFactory;
+import static gov.ncbi.ids.Id.IdScope.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -3,7 +3,6 @@ package gov.ncbi.ids.test;
 import static gov.ncbi.ids.IdDbJsonReader.getJsonFeatures;
 import static gov.ncbi.ids.RequestId.State.*;
 import static gov.ncbi.ids.test.TestRequestId.checkState;
-import static gov.ncbi.ids.Id.IdScope.EXPRESSION;
 import static gov.ncbi.test.TestHelper.assertThrows;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,7 +36,6 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
-import gov.ncbi.ids.Id;
 import gov.ncbi.ids.IdDb;
 import gov.ncbi.ids.IdResolver;
 import gov.ncbi.ids.IdSet;

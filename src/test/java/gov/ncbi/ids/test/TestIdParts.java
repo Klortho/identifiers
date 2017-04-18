@@ -1,19 +1,10 @@
 package gov.ncbi.ids.test;
 
-import static gov.ncbi.ids.IdParts.Problem.BAD_TYPE_PREFIX;
-
 //import static org.hamcrest.MatcherAssert.assertThat;
-
-import static gov.ncbi.ids.IdParts.Problem.BAD_TYPE_SPEC;
-import static gov.ncbi.ids.IdParts.Problem.TYPE_MISMATCH;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
+import static gov.ncbi.ids.IdParts.Problem.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 
@@ -36,11 +27,13 @@ public class TestIdParts
     public TestName name = new TestName();
 
     private IdDb litIds;
+    @SuppressWarnings("unused")
     private IdType pmid;
     private IdType pmcid;
     private IdType mid;
     @SuppressWarnings("unused")
     private IdType doi;
+    @SuppressWarnings("unused")
     private IdType aiid;
 
     /////////////////////////////////////////////////////////////////////////////////////

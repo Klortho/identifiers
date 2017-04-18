@@ -242,6 +242,8 @@ public class IdResolver
      */
     public List<RequestId> parseRequestIds(String reqType, String reqValues)
     {
+        if (reqValues == null) return new ArrayList<RequestId>();
+
         String[] reqValArray = reqValues.split(",");
         return Arrays.asList(reqValArray).stream()
             .map(v -> new RequestId(iddb, reqType, v))
