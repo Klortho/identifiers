@@ -135,8 +135,8 @@ public class TestRequestId
         assertFalse(rid.isVersioned());
 
         assertSame(litIds, rid.getIdDb());
-        assertNull(rid.getRequestedType());
-        assertEquals("pMC1234", rid.getRequestedValue());
+        assertNull(rid.getQueryType());
+        assertEquals("pMC1234", rid.getQueryValue());
         assertEquals(litIds.id("pmcid:PMC1234"), rid.getQueryId());
 
         assertEquals(pmcid, rid.getQueryIdType());

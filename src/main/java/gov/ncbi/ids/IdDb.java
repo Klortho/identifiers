@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +92,18 @@ public class IdDb
      */
     public IdDb(String name) {
         this(name, null);
+    }
+
+    /**
+     * Set a new default type. Normally, when creating a new ID without any
+     * explicit type specified, this tries IdTypes in the order in which they
+     * were defined. This puts the given IdType to the front of the list.
+     */
+    public void setDefaultType(IdType type) {
+        int index = this.types.indexOf(type);
+        if (index == -1) throw new IllegalArgumentException("Invalid IdType");
+        if (index == 0) return;  // already first
+        Collections.swap(this.types, 0, index);
     }
 
     /**

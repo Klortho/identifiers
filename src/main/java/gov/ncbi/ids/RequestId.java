@@ -203,22 +203,8 @@ public class RequestId extends Id
     }
 
     /**
-     * Get the original requested type (might be null).
-     */
-    public String getRequestedType() {
-        return this.queryType;
-    }
-
-    /**
-     * Get the original requested value.
-     */
-    public String getRequestedValue() {
-        return this.queryValue;
-    }
-
-    /**
-     * Get the IdType that was specified when this object was created.
-     * Note that this is not necessarily the same as getQueryType().
+     * Get the IdType that was specified when this object was created. This
+     * might be null.
      */
     public String getQueryType() {
         return this.queryType;
@@ -239,6 +225,7 @@ public class RequestId extends Id
     /**
      * Get the IdType that was specified when this object was created.
      * Note that this is not necessarily the same as getQueryType().
+     * This will be `null` if no type was explicitly specified.
      */
     public IdType getQueryIdType() {
         return this.queryId == null ? null : this.queryId.getType();
@@ -262,6 +249,11 @@ public class RequestId extends Id
         return this.queryId == null ? null : this.queryId.getCurie();
     }
 
+    
+    
+    
+    
+    
     /**
      * Returns the IdSet object, which has the results of the ID
      * resolution, if it has been done.

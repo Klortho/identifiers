@@ -317,8 +317,8 @@ public class TestIdResolver
         assertTrue(rid0.isWellFormed());
         assertFalse(rid0.isResolved());
         assertEquals(false, rid0.isGood());
-        assertEquals("pMid", rid0.getRequestedType());
-        assertEquals("12345", rid0.getRequestedValue());
+        assertEquals("pMid", rid0.getQueryType());
+        assertEquals("12345", rid0.getQueryValue());
         assertEquals(pmid.id("12345"), rid0.getQueryId());
 
         // mixed types
@@ -598,9 +598,8 @@ public class TestIdResolver
 
 
     /**
-     * Verify that if we create an IdResolver that wants to resolve every ID
-     * to pmcids, and feed it a list of pmids, that it will call the resolver
-     * service on them.
+     * Verify that if we create an IdResolver that wants pmcids, then the
+     * default id type changes to pmcids.
      */
     @Test
     public void testIdResolver_0()
@@ -609,7 +608,37 @@ public class TestIdResolver
         initLit("pmcid");
         assertEquals(pmcid, resolver.getWantedType());
 
+        // The default type follows "wanted type", so these will be interpreted
+        // as pmcids:
         List<RequestId> ridList = resolver.resolveIds("26829486,22368089");
+        assertEquals(2, ridList.size());
+
+        RequestId rid0 = ridList.get(0);
+        assertTrue(rid0.hasType(pmcid));
+        assertEquals("PMC26829486", rid0.getId(pmcid).getValue());
+        checkState("rid0", UNKNOWN, rid0);
+
+        RequestId rid1 = ridList.get(1);
+        assertTrue(rid1.hasType(pmcid));
+        assertEquals("PMC22368089", rid1.getId(pmcid).getValue());
+        checkState("rid1", UNKNOWN, rid1);
+    }
+
+
+    /**
+     * Verify that if we create an IdResolver that wants pmcids, and feed it
+     * pmids, that it will call the resolver service on them.
+     */
+    @Test
+    public void testIdResolver_2()
+        throws Exception
+    {
+        initLit("pmcid");
+        assertEquals(pmcid, resolver.getWantedType());
+
+        // The default type follows "wanted type", so these will be interpreted
+        // as pmcids:
+        List<RequestId> ridList = resolver.resolveIds("pmid:26829486,pmid:22368089");
         assertEquals(2, ridList.size());
 
         RequestId rid0 = ridList.get(0);
@@ -622,6 +651,9 @@ public class TestIdResolver
         assertEquals("PMC3539452", rid1.getId(pmcid).getValue());
         checkState("rid1", GOOD, rid1);
     }
+
+
+
 
     /**
      * Verify that we get the same results when the list is peppered with
@@ -636,7 +668,7 @@ public class TestIdResolver
         assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList =
-            resolver.resolveIds("fleegle,22368089,1,26829486");
+            resolver.resolveIds("fleegle,pmid:22368089,1,pmid:26829486");
         assertEquals(4, ridList.size());
 
         RequestId rid0 = ridList.get(0);

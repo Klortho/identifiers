@@ -83,14 +83,19 @@ public class IdResolver
         throws MalformedURLException
     {
         if (iddb == null) throw new IllegalArgumentException(
-                "IdResolver constructor: ID database cannot be null");
+            "IdResolver constructor: ID database cannot be null");
         this.iddb = iddb;
+
         Config defaults = iddb.getConfig();
         this.config = (overrides == null) ? defaults
             : overrides.withFallback(defaults);
 
+        // The wanted-type is also used to detemine the default type when
+        // creating new IDs
         this.wantedIdType = //wantedIdType;
-                iddb.getType(this.config.getString("ncbi.ids.resolver.wanted-type"));
+            iddb.getType(this.config.getString("ncbi.ids.resolver.wanted-type"));
+        this.iddb.setDefaultType(this.wantedIdType);
+
         this.cacheEnabled = this.config.getBoolean("ncbi.ids.cache.enabled");
         this.cacheTtl = this.config.getInt("ncbi.ids.cache.ttl");
         this.cacheSize = this.config.getInt("ncbi.ids.cache.size");
