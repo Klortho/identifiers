@@ -103,7 +103,8 @@ public class IdDb
         int index = this.types.indexOf(type);
         if (index == -1) throw new IllegalArgumentException("Invalid IdType");
         if (index == 0) return;  // already first
-        Collections.swap(this.types, 0, index);
+        this.types.remove(index);
+        this.types.add(0, type);
     }
 
     /**

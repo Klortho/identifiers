@@ -89,6 +89,9 @@ public class IdResolver
         Config defaults = iddb.getConfig();
         this.config = (overrides == null) ? defaults
             : overrides.withFallback(defaults);
+        log.trace("IdResolver config: " + this.config.root().render());
+        log.trace("wanted-type: " +
+            this.config.getString("ncbi.ids.resolver.wanted-type"));
 
         // The wanted-type is also used to detemine the default type when
         // creating new IDs

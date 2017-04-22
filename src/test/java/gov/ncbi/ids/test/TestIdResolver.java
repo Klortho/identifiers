@@ -196,7 +196,6 @@ public class TestIdResolver
             defaults.withValue("ncbi.ids.resolver.wanted-type",
                 ConfigValueFactory.fromAnyRef(wanted));
 
-        //log.trace("getting literature id database with config: " + config);
         iddb = IdDb.getLiteratureIdDb(config);
 
         resolver = iddb.newResolver();
@@ -244,16 +243,20 @@ public class TestIdResolver
     {
         // When using the constructor directly, you must supply a valid
         // IdDb object
-        assertThrows(IllegalArgumentException.class,
-            () -> {
-                @SuppressWarnings("unused")
-                IdResolver r0 = new IdResolver(null);
-            });
+        assertThrows(IllegalArgumentException.class, () -> {
+            @SuppressWarnings("unused")
+            IdResolver r0 = new IdResolver(null);
+        });
 
         // Use constructor directly, default config
         IdDb dummy = new IdDb("dummy");
+        dummy.addType(new IdType("aiid", null));
         IdResolver r1 = new IdResolver(dummy);
+
         assertEquals(86400, r1.getConfig().getInt("ncbi.ids.cache.ttl"));
+        assertEquals(50000, r1.getConfig().getInt("ncbi.ids.cache.size"));
+        assertEquals("aiid",
+            r1.getConfig().getString("ncbi.ids.resolver.wanted-type"));
 
         // Override a config setting
         Config override = ConfigFactory.parseString("ncbi.ids.cache.ttl=42");
@@ -265,7 +268,7 @@ public class TestIdResolver
         assertSame(iddb, resolver.getIdDb());
         assertEquals(aiid, resolver.getWantedType());
 
-        log.debug("Config: " + resolver.getConfig());
+        log.trace("IdResolver config: " + resolver.getConfig().root().render());
     }
 
     /**
@@ -279,8 +282,8 @@ public class TestIdResolver
 
         URL badUrl = new URL("file:///broken/url");
         assertThrows(IllegalArgumentException.class,
-                () -> getUrlPattern(badUrl)
-            );
+            () -> getUrlPattern(badUrl)
+        );
 
 
         URL url = new URL("http://ex.com/?idtype=pmid&ids=26829486,22368089");
@@ -307,7 +310,7 @@ public class TestIdResolver
     public void testParseRequestIds()
         throws Exception
     {
-        initLit();
+        initLit("pmid");
         List<RequestId> rids;
 
         rids = resolver.parseRequestIds("pMid", "12345,67890");
@@ -364,7 +367,6 @@ public class TestIdResolver
     {
         initLit();
         List<RequestId> rids;
-        log.debug("iddb: " + iddb);
 
         RequestId rrid = new RequestId(iddb, "pmcid", "1234");
         IdSet rset = new NonVersionedIdSet(iddb);
@@ -418,7 +420,6 @@ public class TestIdResolver
             new RequestId(iddb, "pmid", "34567"),
             new RequestId(iddb, "pmid", "77898")
         );
-        log.trace("rids: " + rids);
         requestURL = resolver.resolverUrl(fromType, rids);
         log.trace("resolver URL: " + requestURL);
         assertTrue(requestURL.toString().endsWith(
@@ -565,7 +566,7 @@ public class TestIdResolver
         throws Exception
     {
         initLit("doi");
-        List<RequestId> ridList = resolver.resolveIds("22222");
+        List<RequestId> ridList = resolver.resolveIds("pmid:22222");
         // Verify that we get one RequestId, but that it doesn't have a doi
         assertEquals(1, ridList.size());
         assertFalse(ridList.get(0).hasType(doi));
@@ -630,10 +631,11 @@ public class TestIdResolver
      * pmids, that it will call the resolver service on them.
      */
     @Test
-    public void testIdResolver_2()
+    public void testIdResolver_1()
         throws Exception
     {
         initLit("pmcid");
+        resolver.setMapper(mockMapper);
         assertEquals(pmcid, resolver.getWantedType());
 
         // The default type follows "wanted type", so these will be interpreted
@@ -652,15 +654,12 @@ public class TestIdResolver
         checkState("rid1", GOOD, rid1);
     }
 
-
-
-
     /**
      * Verify that we get the same results when the list is peppered with
      * some bad IDs.
      */
     @Test
-    public void testIdResolver_1()
+    public void testIdResolver_2()
         throws Exception
     {
         initLit("pmcid");
@@ -668,7 +667,7 @@ public class TestIdResolver
         assertEquals(pmcid, resolver.getWantedType());
 
         List<RequestId> ridList =
-            resolver.resolveIds("fleegle,pmid:22368089,1,pmid:26829486");
+            resolver.resolveIds("fleegle,pmid:26829486,1,pmid:22368089");
         assertEquals(4, ridList.size());
 
         RequestId rid0 = ridList.get(0);
@@ -678,7 +677,7 @@ public class TestIdResolver
         checkState("pmid:22368089", GOOD, rid1);
 
         RequestId rid2 = ridList.get(2);
-        checkState("pmid:1", GOOD, rid2);
+        checkState("1", UNKNOWN, rid2);
 
         RequestId rid3 = ridList.get(3);
         checkState("pmid:26829486", GOOD, rid3);
@@ -696,21 +695,20 @@ public class TestIdResolver
         assertEquals(aiid, resolver.getWantedType());
 
         List<RequestId> ridList = resolver.resolveIds(
-            "26829486,PMC3539452,aiid:3539450");
+            "pmid:26829486,PMC3539452,aiid:3539450");
         //List<RequestId> ridList = resolver.resolveIds("26829486");
         assertEquals(3, ridList.size());
 
         //------
         RequestId rid0 = ridList.get(0);
         assertNull(rid0.getQueryType());
-        assertEquals("26829486", rid0.getQueryValue());
+        assertEquals("pmid:26829486", rid0.getQueryValue());
         assertEquals(pmid.id("26829486"), rid0.getQueryId());
         assertEquals(pmid, rid0.getQueryIdType());
         assertEquals("26829486", rid0.getQueryIdValue());
         assertTrue(rid0.hasType(pmid));
 
         IdSet idSet0 = rid0.getIdSet();
-        log.trace("idSet: " + idSet0);
 
         Identifier pmid0 = rid0.getId(pmid);
         assertNotNull(pmid0);
@@ -734,7 +732,6 @@ public class TestIdResolver
         assertTrue(rid1.hasType(pmcid));
 
         IdSet idSet1 = rid1.getIdSet();
-        log.trace("idSet: " + idSet1);
 
         Identifier pmcid1 = rid1.getId(pmcid);
         assertNotNull(pmcid1);
@@ -758,7 +755,6 @@ public class TestIdResolver
         assertTrue(rid2.hasType(aiid));
 
         IdSet idSet2 = rid2.getIdSet();
-        log.trace("idSet: " + idSet2);
 
         Identifier aiid2 = rid2.getId(aiid);
         assertNotNull(aiid2);
